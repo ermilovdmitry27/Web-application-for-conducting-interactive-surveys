@@ -3,32 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
 import { buildWebSocketUrl, parseWebSocketMessage } from "../lib/websocket";
-
-function getStoredUser() {
-  try {
-    const raw = localStorage.getItem("auth_user");
-    return raw ? JSON.parse(raw) : null;
-  } catch (_error) {
-    return null;
-  }
-}
-
-function formatSeconds(totalSeconds) {
-  const safe = Math.max(0, Number(totalSeconds) || 0);
-  const minutes = Math.floor(safe / 60);
-  const seconds = safe % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
-
-function getLiveStatusLabel(status, isPaused) {
-  if (status === "finished") {
-    return "Завершен";
-  }
-  if (isPaused) {
-    return "Пауза";
-  }
-  return "Идет";
-}
+import LiveHeroSection from "./participant-quiz/LiveHeroSection";
+import { formatSeconds, getLiveStatusLabel, getStoredUser } from "./participant-quiz/utils";
 
 export default function ParticipantQuizPage() {
   const navigate = useNavigate();
@@ -403,6 +379,18 @@ export default function ParticipantQuizPage() {
       !isQuestionExpired &&
       (allowAnswerChanges || !isQuestionAnswered)
   );
+  const progressValue =
+    isRunning && isLiveStarted ? `${currentQuestionPosition}/${session.questionCount}` : "Lobby";
+  const progressText =
+    isRunning && isLiveStarted
+      ? sessionIsPaused
+        ? "Квиз поставлен на паузу организатором."
+        : "Сейчас открыт текущий вопрос."
+      : "Ожидание запуска от организатора.";
+  const elapsedLabel = formatSeconds(elapsedSeconds);
+  const elapsedText = attemptsInfo
+    ? `Осталось попыток: ${attemptsInfo.remaining}`
+    : `WS: ${wsStatus}`;
 
   const handleOptionToggle = (optionId, checked) => {
     if (!currentQuestion || !isRunning) {
@@ -526,51 +514,15 @@ export default function ParticipantQuizPage() {
 
         {!isLoading && !loadError && session && (
           <>
-            <section className={styles.liveHeroPanel}>
-              <div className={styles.liveHeroCopy}>
-                <p className={styles.sectionEyebrow}>Live participation</p>
-                <h1 className={styles.title}>{session.quizTitle}</h1>
-                <p className={styles.sectionLead}>
-                  Подключение держится через WebSocket, вопросы переключаются синхронно для всех участников,
-                  а результат фиксируется сразу после завершения квиза.
-                </p>
-              </div>
-
-              <div className={styles.liveMetricGrid}>
-                <article className={styles.liveMetricCard}>
-                  <p className={styles.liveMetricLabel}>Комната</p>
-                  <p className={styles.liveMetricValue}>{session.joinCode}</p>
-                  <p className={styles.liveMetricText}>Код можно использовать для повторного входа.</p>
-                </article>
-                <article className={styles.liveMetricCard}>
-                  <p className={styles.liveMetricLabel}>Участники</p>
-                  <p className={styles.liveMetricValue}>{session.participantsCount}</p>
-                  <p className={styles.liveMetricText}>Подключенные игроки в текущем эфире.</p>
-                </article>
-                <article className={styles.liveMetricCard}>
-                  <p className={styles.liveMetricLabel}>Прогресс</p>
-                  <p className={styles.liveMetricValue}>
-                    {isRunning && isLiveStarted ? `${currentQuestionPosition}/${session.questionCount}` : "Lobby"}
-                  </p>
-                  <p className={styles.liveMetricText}>
-                    {isRunning && isLiveStarted
-                      ? sessionIsPaused
-                        ? "Квиз поставлен на паузу организатором."
-                        : "Сейчас открыт текущий вопрос."
-                      : "Ожидание запуска от организатора."}
-                  </p>
-                </article>
-                <article className={styles.liveMetricCard}>
-                  <p className={styles.liveMetricLabel}>Эфир</p>
-                  <p className={styles.liveMetricValue}>{formatSeconds(elapsedSeconds)}</p>
-                  <p className={styles.liveMetricText}>
-                    {attemptsInfo
-                      ? `Осталось попыток: ${attemptsInfo.remaining}`
-                      : `WS: ${wsStatus}`}
-                  </p>
-                </article>
-              </div>
-            </section>
+            <LiveHeroSection
+              quizTitle={session.quizTitle}
+              joinCode={session.joinCode}
+              participantsCount={session.participantsCount}
+              progressValue={progressValue}
+              progressText={progressText}
+              elapsedLabel={elapsedLabel}
+              elapsedText={elapsedText}
+            />
 
             {actionError && <p className={styles.formError}>{actionError}</p>}
             {actionSuccess && <p className={styles.formSuccess}>{actionSuccess}</p>}
