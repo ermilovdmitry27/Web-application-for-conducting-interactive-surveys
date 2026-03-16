@@ -7,6 +7,7 @@ import { getApiBaseUrl } from "../lib/api/config";
 import { requestWithAuth } from "../lib/api/requestWithAuth";
 import QuizBasicsSection from "./create-quiz/QuizBasicsSection";
 import QuizHeroSection from "./create-quiz/QuizHeroSection";
+import QuizTimingSection from "./create-quiz/QuizTimingSection";
 import QuestionCard from "./create-quiz/QuestionCard";
 import QuizRulesSection from "./create-quiz/QuizRulesSection";
 import {
@@ -16,7 +17,6 @@ import {
   DEFAULT_QUESTION_TIME_SECONDS,
   DEFAULT_QUESTIONS,
   MAX_ATTEMPTS_PER_PARTICIPANT,
-  MAX_DURATION_MINUTES,
   MAX_OPTIONS,
   MAX_QUESTION_TIME_SECONDS,
   MAX_QUESTIONS,
@@ -503,69 +503,16 @@ export default function CreateQuizPage() {
               onDescriptionChange={(event) => setDescription(event.target.value)}
             />
 
-            <section className={styles.sectionPanel}>
-              <div className={styles.sectionHeader}>
-                <p className={styles.sectionEyebrow}>Timing and limits</p>
-                <h2 className={styles.sectionTitle}>Темп прохождения</h2>
-                <p className={styles.sectionText}>
-                  Эти параметры определяют длительность квиза, лимит попыток и число карточек вопросов в сценарии.
-                </p>
-              </div>
-
-              <div className={styles.gridTwo}>
-                <label className={styles.label}>
-                  Время на прохождение (мин)
-                  <input
-                    className={styles.input}
-                    type="number"
-                    min={1}
-                    max={MAX_DURATION_MINUTES}
-                    value={durationMinutes}
-                    onChange={(event) => setDurationMinutes(Number(event.target.value))}
-                    required
-                  />
-                </label>
-
-                <label className={styles.label}>
-                  Время на 1 вопрос (сек)
-                  <input
-                    className={styles.input}
-                    type="number"
-                    min={MIN_QUESTION_TIME_SECONDS}
-                    max={MAX_QUESTION_TIME_SECONDS}
-                    value={questionTimeSeconds}
-                    onChange={(event) => setQuestionTimeSeconds(Number(event.target.value))}
-                    required
-                  />
-                </label>
-
-                <label className={styles.label}>
-                  Количество вопросов
-                  <input
-                    className={styles.input}
-                    type="number"
-                    min={MIN_QUESTIONS}
-                    max={MAX_QUESTIONS}
-                    value={questionCount}
-                    onChange={handleQuestionCountChange}
-                    required
-                  />
-                </label>
-
-                <label className={styles.label}>
-                  Лимит попыток на участника
-                  <input
-                    className={styles.input}
-                    type="number"
-                    min={1}
-                    max={MAX_ATTEMPTS_PER_PARTICIPANT}
-                    value={maxAttempts}
-                    onChange={(event) => setMaxAttempts(Number(event.target.value))}
-                    required
-                  />
-                </label>
-              </div>
-            </section>
+            <QuizTimingSection
+              durationMinutes={durationMinutes}
+              questionTimeSeconds={questionTimeSeconds}
+              questionCount={questionCount}
+              maxAttempts={maxAttempts}
+              onDurationMinutesChange={(event) => setDurationMinutes(Number(event.target.value))}
+              onQuestionTimeSecondsChange={(event) => setQuestionTimeSeconds(Number(event.target.value))}
+              onQuestionCountChange={handleQuestionCountChange}
+              onMaxAttemptsChange={(event) => setMaxAttempts(Number(event.target.value))}
+            />
 
             <QuizRulesSection
               isActive={isActive}
