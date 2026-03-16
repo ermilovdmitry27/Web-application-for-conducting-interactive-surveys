@@ -6,6 +6,7 @@ import CabinetTopMenu from "../components/CabinetTopMenu";
 import { getApiBaseUrl } from "../lib/api/config";
 import { requestWithAuth } from "../lib/api/requestWithAuth";
 import QuizBasicsSection from "./create-quiz/QuizBasicsSection";
+import QuizHeroSection from "./create-quiz/QuizHeroSection";
 import QuestionCard from "./create-quiz/QuestionCard";
 import QuizRulesSection from "./create-quiz/QuizRulesSection";
 import {
@@ -484,32 +485,13 @@ export default function CreateQuizPage() {
 
         {!isPageLoading && !pageError && (
           <form className={styles.form} onSubmit={handleSubmit}>
-            <div className={styles.heroHeader}>
-              <div className={styles.heroCopy}>
-                <p className={styles.heroEyebrow}>{isEditMode ? "Quiz editor" : "Quiz builder"}</p>
-                <p className={styles.heroLead}>
-                  Соберите сценарий квиза: задайте тему, темп прохождения, правила показа ответов и подготовьте блок вопросов для live-сессии.
-                </p>
-              </div>
-              <div className={styles.summaryGrid}>
-                <div className={styles.summaryCard}>
-                  <p className={styles.summaryLabel}>Категория</p>
-                  <p className={styles.summaryValue}>{selectedCategoryLabel || "—"}</p>
-                </div>
-                <div className={styles.summaryCard}>
-                  <p className={styles.summaryLabel}>Вопросы</p>
-                  <p className={styles.summaryValue}>{questions.length}</p>
-                </div>
-                <div className={styles.summaryCard}>
-                  <p className={styles.summaryLabel}>Таймер</p>
-                  <p className={styles.summaryValue}>{questionTimeSeconds} c</p>
-                </div>
-                <div className={styles.summaryCard}>
-                  <p className={styles.summaryLabel}>Попытки</p>
-                  <p className={styles.summaryValue}>{maxAttempts}</p>
-                </div>
-              </div>
-            </div>
+            <QuizHeroSection
+              isEditMode={isEditMode}
+              selectedCategoryLabel={selectedCategoryLabel}
+              questionsCount={questions.length}
+              questionTimeSeconds={questionTimeSeconds}
+              maxAttempts={maxAttempts}
+            />
 
             <QuizBasicsSection
               title={title}
