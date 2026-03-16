@@ -6,6 +6,7 @@ import { getApiBaseUrl } from "../lib/api/config";
 import { requestWithAuth } from "../lib/api/requestWithAuth";
 import { buildWebSocketUrl, parseWebSocketMessage } from "../lib/websocket";
 import LiveHeroSection from "./participant-quiz/LiveHeroSection";
+import LiveLobbyPanel from "./participant-quiz/LiveLobbyPanel";
 import LiveQueuePanel from "./participant-quiz/LiveQueuePanel";
 import { formatSeconds, getLiveStatusLabel, getStoredUser } from "./participant-quiz/utils";
 
@@ -506,13 +507,7 @@ export default function ParticipantQuizPage() {
             <section className={styles.liveWorkspaceGrid}>
               <section className={styles.liveStageCard}>
                 {isRunning && !isLiveStarted && (
-                  <div className={styles.liveStatePanel}>
-                    <p className={styles.liveStateEyebrow}>Lobby</p>
-                    <h2 className={styles.liveStageTitle}>Комната открыта, эфир еще не начался.</h2>
-                    <p className={styles.liveStateText}>
-                      Дождитесь, пока организатор нажмет «Начать квиз». После этого вопрос появится автоматически.
-                    </p>
-                  </div>
+                  <LiveLobbyPanel />
                 )}
 
                 {isRunning && isLiveStarted && !currentQuestion && (
