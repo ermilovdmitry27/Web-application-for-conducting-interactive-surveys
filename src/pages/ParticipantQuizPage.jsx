@@ -5,6 +5,7 @@ import CabinetTopMenu from "../components/CabinetTopMenu";
 import { getApiBaseUrl } from "../lib/api/config";
 import { requestWithAuth } from "../lib/api/requestWithAuth";
 import { buildWebSocketUrl, parseWebSocketMessage } from "../lib/websocket";
+import ActiveQuestionForm from "./participant-quiz/ActiveQuestionForm";
 import FinishedLeaderboardPanel from "./participant-quiz/FinishedLeaderboardPanel";
 import LiveHeroSection from "./participant-quiz/LiveHeroSection";
 import LiveLobbyPanel from "./participant-quiz/LiveLobbyPanel";
@@ -516,71 +517,20 @@ export default function ParticipantQuizPage() {
                 )}
 
                 {isRunning && isLiveStarted && currentQuestion && (
-                  <form className={styles.liveQuestionForm} onSubmit={handleSubmitAnswer}>
-                    <div className={styles.liveQuestionHeader}>
-                      <div className={styles.liveQuestionMeta}>
-                        <p className={styles.liveStateEyebrow}>Question {currentQuestion.index + 1}</p>
-                        <h2 className={styles.liveStageTitle}>{currentQuestion.prompt}</h2>
-                      </div>
-                      <div className={styles.liveTimerWrap}>
-                        <span
-                          className={`${styles.quizTimer} ${
-                            !sessionIsPaused && questionRemainingSeconds <= 5 ? styles.quizTimerWarning : ""
-                          }`}
-                        >
-                          {sessionIsPaused
-                            ? `Пауза: ${formatSeconds(questionRemainingSeconds)}`
-                            : `Осталось: ${formatSeconds(questionRemainingSeconds)}`}
-                        </span>
-                        <p className={styles.liveHelperText}>
-                          {sessionIsPaused
-                            ? "Квиз на паузе. Ответы временно заблокированы."
-                            : `На вопрос: ${formatSeconds(session.questionTimeLimitSeconds)}`}
-                        </p>
-                      </div>
-                    </div>
-
-                    {currentQuestion.type === "image" && currentQuestion.imageUrl && (
-                      <img
-                        className={styles.participantQuestionImage}
-                        src={currentQuestion.imageUrl}
-                        alt={`Иллюстрация к вопросу ${currentQuestion.index + 1}`}
-                      />
-                    )}
-
-                    <div className={styles.liveAnswerGrid}>
-                      {currentQuestion.options.map((option) => (
-                        <label key={option.id} className={styles.liveAnswerCard}>
-                          <input
-                            type={currentQuestion.answerMode === "single" ? "radio" : "checkbox"}
-                            name={`live-question-${currentQuestion.index}`}
-                            checked={selectedOptionIds.includes(option.id)}
-                            disabled={!canSubmitAnswer}
-                            onChange={(event) => handleOptionToggle(option.id, event.target.checked)}
-                          />
-                          <span>{option.text}</span>
-                        </label>
-                      ))}
-                    </div>
-
-                    {isQuestionExpired && (
-                      <p className={styles.formError}>
-                        Время на этот вопрос вышло. Ожидайте следующий вопрос.
-                      </p>
-                    )}
-
-                    <div className={styles.participantQuizActions}>
-                      <button type="submit" className={styles.formSubmitButton} disabled={!canSubmitAnswer}>
-                        {isSubmitting
-                          ? "Отправка..."
-                          : isQuestionAnswered
-                            ? allowAnswerChanges
-                              ? "Изменить ответ"
-                              : "Ответ отправлен"
-                            : "Ответить"}
-                      </button>
-                    </div>
-                  </form>
+                  <ActiveQuestionForm
+                    currentQuestion={currentQuestion}
+                    isPaused={sessionIsPaused}
+                    questionRemainingSeconds={questionRemainingSeconds}
+                    questionTimeLimitSeconds={session.questionTimeLimitSeconds}
+                    selectedOptionIds={selectedOptionIds}
+                    canSubmitAnswer={canSubmitAnswer}
+                    isQuestionExpired={isQuestionExpired}
+                    isSubmitting={isSubmitting}
+                    isQuestionAnswered={isQuestionAnswered}
+                    allowAnswerChanges={allowAnswerChanges}
+                    onOptionToggle={handleOptionToggle}
+                    onSubmit={handleSubmitAnswer}
+                  />
                 )}
 
                 {session.status === "finished" && (
