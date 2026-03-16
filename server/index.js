@@ -70,6 +70,7 @@ const {
   mapQuizForParticipant,
   mapLiveQuizFromRow,
   mapLiveSessionFromRow,
+  mapAttemptCommon,
 } = require("./mappers");
 
 const app = express();
@@ -1372,33 +1373,6 @@ async function processLiveAutoAdvanceTick() {
       console.error("Live auto-advance failed for session row:", error);
     }
   }
-}
-
-function mapAttemptCommon(row) {
-  const maxScore = Number(row.max_score || 0);
-  const score = Number(row.score || 0);
-  const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
-  const answers = Array.isArray(row.answers_json) ? row.answers_json : [];
-  const answeredQuestionsCount = answers.filter(
-    (answer) => Array.isArray(answer?.optionIds) && answer.optionIds.length > 0
-  ).length;
-  const liveSessionId =
-    typeof row.live_session_id === "number" || typeof row.live_session_id === "string"
-      ? Number(row.live_session_id)
-      : null;
-
-  return {
-    id: row.id,
-    score,
-    maxScore,
-    percentage,
-    answers,
-    answeredQuestionsCount,
-    timeSpentSeconds: Number(row.time_spent_seconds || 0),
-    liveSessionId: Number.isInteger(liveSessionId) && liveSessionId > 0 ? liveSessionId : null,
-    isLive: Number.isInteger(liveSessionId) && liveSessionId > 0,
-    createdAt: row.created_at,
-  };
 }
 
 function generateQuizJoinCode(length = 6) {
