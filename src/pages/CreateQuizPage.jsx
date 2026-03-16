@@ -3,29 +3,28 @@ import { useNavigate, useParams } from "react-router-dom";
 import cabinetStyles from "../css/CabinetPage.module.css";
 import styles from "../css/CreateQuizPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
-
-const CATEGORY_OPTIONS = [
-  { value: "history", label: "История" },
-  { value: "science", label: "Наука" },
-  { value: "it", label: "IT" },
-  { value: "literature", label: "Литература" },
-  { value: "mixed", label: "Смешанная" },
-];
-
-const MIN_QUESTIONS = 1;
-const MAX_QUESTIONS = 50;
-const MIN_OPTIONS = 2;
-const MAX_OPTIONS = 8;
-const DEFAULT_QUESTIONS = 3;
-const DEFAULT_DURATION_MINUTES = 15;
-const MAX_DURATION_MINUTES = 240;
-const DEFAULT_QUESTION_TIME_SECONDS = 30;
-const MIN_QUESTION_TIME_SECONDS = 5;
-const MAX_QUESTION_TIME_SECONDS = 600;
-const DEFAULT_MAX_ATTEMPTS = 1;
-const MAX_ATTEMPTS_PER_PARTICIPANT = 10;
-const QUESTION_IMAGE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
-const QUESTION_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+import QuestionCard from "./create-quiz/QuestionCard";
+import {
+  CATEGORY_OPTIONS,
+  DEFAULT_DURATION_MINUTES,
+  DEFAULT_MAX_ATTEMPTS,
+  DEFAULT_QUESTION_TIME_SECONDS,
+  DEFAULT_QUESTIONS,
+  MAX_ATTEMPTS_PER_PARTICIPANT,
+  MAX_DURATION_MINUTES,
+  MAX_OPTIONS,
+  MAX_QUESTION_TIME_SECONDS,
+  MAX_QUESTIONS,
+  MIN_OPTIONS,
+  MIN_QUESTION_TIME_SECONDS,
+  MIN_QUESTIONS,
+  QUESTION_IMAGE_TYPES,
+} from "./create-quiz/constants";
+import {
+  buildQuestions,
+  createEmptyOption,
+  normalizeQuestionsForForm,
+} from "./create-quiz/form-utils";
 
 function getStoredUser() {
   try {
@@ -34,102 +33,6 @@ function getStoredUser() {
   } catch (_error) {
     return null;
   }
-}
-
-function createEmptyOption() {
-  return {
-    text: "",
-    isCorrect: false,
-  };
-}
-
-function createEmptyQuestion() {
-  return {
-    type: "text",
-    prompt: "",
-    imageUrl: "",
-    answerMode: "single",
-    options: [createEmptyOption(), createEmptyOption()],
-  };
-}
-
-function buildQuestions(nextCount, currentQuestions = []) {
-  const safeCount = Math.max(MIN_QUESTIONS, Math.min(MAX_QUESTIONS, nextCount));
-  const questions = [...currentQuestions];
-  while (questions.length < safeCount) {
-    questions.push(createEmptyQuestion());
-  }
-  return questions.slice(0, safeCount);
-}
-
-function normalizeQuestionForForm(rawQuestion) {
-  if (!rawQuestion || typeof rawQuestion !== "object") {
-    return createEmptyQuestion();
-  }
-
-  const type = rawQuestion.type === "image" ? "image" : "text";
-  const answerMode = rawQuestion.answerMode === "multiple" ? "multiple" : "single";
-  const prompt = typeof rawQuestion.prompt === "string" ? rawQuestion.prompt : "";
-  const imageUrl = typeof rawQuestion.imageUrl === "string" ? rawQuestion.imageUrl : "";
-
-  let options = Array.isArray(rawQuestion.options)
-    ? rawQuestion.options
-        .map((option) => {
-          const text = typeof option?.text === "string" ? option.text : "";
-          return {
-            text,
-            isCorrect: Boolean(option?.isCorrect),
-          };
-        })
-        .filter((option) => option.text.trim().length > 0)
-    : [];
-
-  if (options.length < MIN_OPTIONS) {
-    options = [...options];
-    while (options.length < MIN_OPTIONS) {
-      options.push(createEmptyOption());
-    }
-  }
-  if (options.length > MAX_OPTIONS) {
-    options = options.slice(0, MAX_OPTIONS);
-  }
-
-  if (answerMode === "single") {
-    let foundCorrect = false;
-    options = options.map((option) => {
-      if (option.isCorrect && !foundCorrect) {
-        foundCorrect = true;
-        return option;
-      }
-      return {
-        ...option,
-        isCorrect: false,
-      };
-    });
-    if (!foundCorrect && options.length > 0) {
-      options[0] = {
-        ...options[0],
-        isCorrect: true,
-      };
-    }
-  }
-
-  return {
-    type,
-    prompt,
-    imageUrl,
-    answerMode,
-    options,
-  };
-}
-
-function normalizeQuestionsForForm(rawQuestions) {
-  const source = Array.isArray(rawQuestions) ? rawQuestions : [];
-  if (source.length === 0) {
-    return buildQuestions(DEFAULT_QUESTIONS, []);
-  }
-  const normalized = source.map((question) => normalizeQuestionForForm(question));
-  return buildQuestions(normalized.length, normalized);
 }
 
 export default function CreateQuizPage() {
@@ -803,143 +706,22 @@ export default function CreateQuizPage() {
 
               <div className={styles.questionsWrap}>
                 {questions.map((question, questionIndex) => {
-                  const uploadState = questionUploadStates[questionIndex] || {};
-                  const isUploadingImage = Boolean(uploadState.isUploading);
-                  const uploadError = String(uploadState.error || "");
                   return (
-                    <article key={questionIndex} className={styles.questionCard}>
-                      <div className={styles.questionHead}>
-                        <h2 className={styles.questionTitle}>Вопрос {questionIndex + 1}</h2>
-                        <div className={styles.inlineControls}>
-                          <select
-                            className={styles.inputCompact}
-                            value={question.type}
-                            onChange={(event) =>
-                              handleQuestionField(questionIndex, "type", event.target.value)
-                            }
-                          >
-                            <option value="text">Текстовый</option>
-                            <option value="image">С изображением</option>
-                          </select>
-
-                          <select
-                            className={styles.inputCompact}
-                            value={question.answerMode}
-                            onChange={(event) =>
-                              handleAnswerModeChange(questionIndex, event.target.value)
-                            }
-                          >
-                            <option value="single">Один верный</option>
-                            <option value="multiple">Несколько верных</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <label className={styles.label}>
-                        Текст вопроса
-                        <input
-                          className={styles.input}
-                          type="text"
-                          value={question.prompt}
-                          onChange={(event) =>
-                            handleQuestionField(questionIndex, "prompt", event.target.value)
-                          }
-                          placeholder="Введите вопрос"
-                          maxLength={300}
-                          required
-                        />
-                      </label>
-
-                      {question.type === "image" && (
-                        <div className={styles.imageUploadCard}>
-                          <div className={styles.imageUploadHead}>
-                            <div>
-                              <p className={styles.imageUploadTitle}>Изображение вопроса</p>
-                              <p className={styles.imageUploadMeta}>Поддерживаются PNG, JPG, WEBP и GIF.</p>
-                            </div>
-                            <label className={styles.uploadButton}>
-                              <input
-                                className={styles.hiddenFileInput}
-                                type="file"
-                                accept={QUESTION_IMAGE_ACCEPT}
-                                onChange={(event) => handleQuestionImageSelected(questionIndex, event)}
-                                disabled={isUploadingImage || isSubmitting}
-                              />
-                              {isUploadingImage
-                                ? "Загрузка..."
-                                : question.imageUrl
-                                  ? "Заменить изображение"
-                                  : "Загрузить изображение"}
-                            </label>
-                          </div>
-
-                          {question.imageUrl ? (
-                            <div className={styles.imagePreviewWrap}>
-                              <img
-                                className={styles.imagePreview}
-                                src={question.imageUrl}
-                                alt={`Иллюстрация для вопроса ${questionIndex + 1}`}
-                              />
-                              <button
-                                type="button"
-                                className={styles.optionDelete}
-                                onClick={() => handleQuestionImageRemove(questionIndex)}
-                              >
-                                Удалить изображение
-                              </button>
-                            </div>
-                          ) : (
-                            <p className={styles.imageUploadMeta}>Файл еще не загружен.</p>
-                          )}
-
-                          {uploadError && <p className={styles.errorText}>{uploadError}</p>}
-                        </div>
-                      )}
-
-                      <div className={styles.optionList}>
-                        {question.options.map((option, optionIndex) => (
-                          <div key={optionIndex} className={styles.optionRow}>
-                            <label className={styles.optionCheck}>
-                              <input
-                                type="checkbox"
-                                checked={option.isCorrect}
-                                onChange={() => handleOptionCorrectToggle(questionIndex, optionIndex)}
-                              />
-                              <span>Верный</span>
-                            </label>
-                            <input
-                              className={styles.input}
-                              type="text"
-                              value={option.text}
-                              onChange={(event) =>
-                                handleOptionTextChange(questionIndex, optionIndex, event.target.value)
-                              }
-                              placeholder={`Вариант ${optionIndex + 1}`}
-                              maxLength={180}
-                              required
-                            />
-                            <button
-                              type="button"
-                              className={styles.optionDelete}
-                              onClick={() => handleRemoveOption(questionIndex, optionIndex)}
-                              disabled={question.options.length <= MIN_OPTIONS}
-                              aria-label="Удалить вариант"
-                            >
-                              Удалить
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-
-                      <button
-                        type="button"
-                        className={styles.optionAdd}
-                        onClick={() => handleAddOption(questionIndex)}
-                        disabled={question.options.length >= MAX_OPTIONS}
-                      >
-                        + Добавить вариант
-                      </button>
-                    </article>
+                    <QuestionCard
+                      key={questionIndex}
+                      questionIndex={questionIndex}
+                      question={question}
+                      uploadState={questionUploadStates[questionIndex]}
+                      isSubmitting={isSubmitting}
+                      onQuestionField={handleQuestionField}
+                      onAnswerModeChange={handleAnswerModeChange}
+                      onQuestionImageSelected={handleQuestionImageSelected}
+                      onQuestionImageRemove={handleQuestionImageRemove}
+                      onOptionTextChange={handleOptionTextChange}
+                      onOptionCorrectToggle={handleOptionCorrectToggle}
+                      onAddOption={handleAddOption}
+                      onRemoveOption={handleRemoveOption}
+                    />
                   );
                 })}
               </div>
