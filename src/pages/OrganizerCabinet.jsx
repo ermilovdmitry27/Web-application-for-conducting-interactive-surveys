@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
 import FeatureDeckSection from "./organizer-cabinet/FeatureDeckSection";
+import WorkspaceHeroSection from "./organizer-cabinet/WorkspaceHeroSection";
 import {
   AUTH_USER_UPDATED_EVENT,
   ORGANIZER_NOTES,
@@ -258,52 +259,14 @@ export default function OrganizerCabinet() {
       </header>
 
       <section className={styles.workspaceShell}>
-        <section className={styles.workspaceHero}>
-          <div className={styles.workspaceHeroMain}>
-            <p className={styles.workspaceEyebrow}>Organizer workspace</p>
-            <h1 className={styles.workspaceTitle}>
-              {firstName}, управляйте квизами, live-комнатами и аналитикой из одного кабинета.
-            </h1>
-            <p className={styles.workspaceLead}>
-              Здесь собраны сценарии квизов, запуск эфира, история сессий и данные по участникам без лишних переходов
-              между экранами.
-            </p>
-
-            <div className={styles.workspacePillRow}>
-              <span className={styles.workspacePill}>Квизов {quizzes.length}</span>
-              <span className={styles.workspacePill}>Участников {uniqueParticipantsCount}</span>
-              <span className={styles.workspacePill}>Live-сессий {liveSessions.length}</span>
-            </div>
-          </div>
-
-          <aside className={styles.workspaceHeroAside}>
-            <section className={styles.commandCard}>
-              <div className={styles.commandHeader}>
-                <p className={styles.commandEyebrow}>Control room</p>
-                <h2 className={styles.commandTitle}>Создать новый квиз</h2>
-                <p className={styles.commandText}>
-                  Запустите новый сценарий, настройте вопросы и подготовьте комнату для live-сессии.
-                </p>
-              </div>
-              <button
-                type="button"
-                className={styles.commandButton}
-                onClick={() => navigate("/organizer/quizzes/new")}
-              >
-                Создать квиз
-              </button>
-            </section>
-
-            <div className={styles.noteStack}>
-              {ORGANIZER_NOTES.map((note) => (
-                <article key={note.label} className={styles.utilityNote}>
-                  <p className={styles.utilityNoteLabel}>{note.label}</p>
-                  <p className={styles.utilityNoteText}>{note.text}</p>
-                </article>
-              ))}
-            </div>
-          </aside>
-        </section>
+        <WorkspaceHeroSection
+          firstName={firstName}
+          quizzesCount={quizzes.length}
+          uniqueParticipantsCount={uniqueParticipantsCount}
+          liveSessionsCount={liveSessions.length}
+          notes={ORGANIZER_NOTES}
+          onCreateQuiz={() => navigate("/organizer/quizzes/new")}
+        />
 
         <FeatureDeckSection signals={ORGANIZER_SIGNALS} />
       </section>
