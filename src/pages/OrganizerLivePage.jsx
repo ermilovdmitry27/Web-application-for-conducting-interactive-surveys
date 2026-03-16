@@ -9,6 +9,7 @@ import ActiveQuestionPanel from "./organizer-live/ActiveQuestionPanel";
 import FinishedLeaderboardPanel from "./organizer-live/FinishedLeaderboardPanel";
 import LiveHeroSection from "./organizer-live/LiveHeroSection";
 import LiveLobbyPanel from "./organizer-live/LiveLobbyPanel";
+import LiveSidebar from "./organizer-live/LiveSidebar";
 import { getLiveStatusLabel, getStoredUser } from "./organizer-live/utils";
 
 export default function OrganizerLivePage() {
@@ -535,93 +536,25 @@ export default function OrganizerLivePage() {
                 )}
               </section>
 
-              <aside className={styles.liveSidebar}>
-                <article className={styles.liveSidebarCard}>
-                  <p className={styles.liveSidebarLabel}>Session brief</p>
-                  <p className={styles.liveSidebarText}>Комната: {session.joinCode}</p>
-                  <p className={styles.liveSidebarText}>Участников: {session.participantsCount}</p>
-                  <p className={styles.liveSidebarText}>
-                    {session.status === "running" && session.isLiveStarted
-                      ? `Вопрос ${currentQuestionPosition} из ${session.questionCount}`
-                      : "Эфир еще не запущен"}
-                  </p>
-                </article>
-
-                <article className={styles.liveSidebarCard}>
-                  <p className={styles.liveSidebarLabel}>Control rail</p>
-                  <div className={styles.liveActionStack}>
-                    {session.status === "running" && !session.isLiveStarted && (
-                      <button
-                        type="button"
-                        className={styles.formSubmitButton}
-                        onClick={handleStartSession}
-                        disabled={isActionLoading}
-                      >
-                        {isActionLoading && actionType === "start" ? "Запускаем..." : "Начать квиз"}
-                      </button>
-                    )}
-                    {session.status === "running" && session.isLiveStarted && !session.isPaused && (
-                      <button
-                        type="button"
-                        className={styles.formSubmitButton}
-                        onClick={handlePauseSession}
-                        disabled={isActionLoading}
-                      >
-                        {isActionLoading && actionType === "pause" ? "Ставим на паузу..." : "Пауза"}
-                      </button>
-                    )}
-                    {session.status === "running" && session.isLiveStarted && session.isPaused && (
-                      <button
-                        type="button"
-                        className={styles.formSubmitButton}
-                        onClick={handleResumeSession}
-                        disabled={isActionLoading}
-                      >
-                        {isActionLoading && actionType === "resume" ? "Возобновляем..." : "Продолжить"}
-                      </button>
-                    )}
-                    {session.status === "running" && session.isLiveStarted && (
-                      <button
-                        type="button"
-                        className={styles.formSubmitButton}
-                        onClick={handleNextQuestion}
-                        disabled={isActionLoading}
-                      >
-                        {isActionLoading && actionType === "next"
-                          ? "Обновление..."
-                          : "Следующий вопрос"}
-                      </button>
-                    )}
-                    {session.status === "running" && (
-                      <button
-                        type="button"
-                        className={styles.quizDeleteButton}
-                        onClick={handleFinishSession}
-                        disabled={isActionLoading}
-                      >
-                        {isActionLoading && actionType === "finish"
-                          ? "Завершаем..."
-                          : "Завершить эфир"}
-                      </button>
-                    )}
-                    {session.status === "finished" && (
-                      <button
-                        type="button"
-                        className={styles.formSubmitButton}
-                        onClick={() => refreshLeaderboard(session.sessionId)}
-                      >
-                        Обновить рейтинг
-                      </button>
-                    )}
-                  </div>
-                </article>
-
-                <article className={styles.liveSidebarCard}>
-                  <p className={styles.liveSidebarLabel}>Realtime</p>
-                  <p className={styles.liveSidebarText}>WS: {wsStatus}</p>
-                  <p className={styles.liveSidebarText}>Последнее событие: {lastWsEvent}</p>
-                </article>
-              </aside>
+              <LiveSidebar
+                joinCode={session.joinCode}
+                participantsCount={session.participantsCount}
+                sessionStatus={session.status}
+                isLiveStarted={session.isLiveStarted}
+                isPaused={session.isPaused}
+                currentQuestionPosition={currentQuestionPosition}
+                questionCount={session.questionCount}
+                isActionLoading={isActionLoading}
+                actionType={actionType}
+                wsStatus={wsStatus}
+                lastWsEvent={lastWsEvent}
+                onStartSession={handleStartSession}
+                onPauseSession={handlePauseSession}
+                onResumeSession={handleResumeSession}
+                onNextQuestion={handleNextQuestion}
+                onFinishSession={handleFinishSession}
+                onRefreshLeaderboard={() => refreshLeaderboard(session.sessionId)}
+              />
             </section>
           </>
         )}
