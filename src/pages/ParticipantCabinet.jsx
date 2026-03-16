@@ -5,6 +5,7 @@ import CabinetTopMenu from "../components/CabinetTopMenu";
 import { getApiBaseUrl } from "../lib/api/config";
 import { requestWithAuth as sharedRequestWithAuth } from "../lib/api/requestWithAuth";
 import FeatureDeckSection from "./participant-cabinet/FeatureDeckSection";
+import WorkspaceHeroSection from "./participant-cabinet/WorkspaceHeroSection";
 import {
   AUTH_USER_UPDATED_EVENT,
   PARTICIPANT_SIGNALS,
@@ -274,58 +275,17 @@ export default function ParticipantCabinet() {
       </header>
 
       <section className={styles.workspaceShell}>
-        <section className={styles.workspaceHero}>
-          <div className={styles.workspaceHeroMain}>
-            <h1 className={styles.workspaceTitle}>
-              {firstName}, подключайтесь к live-квизам и сохраняйте каждую попытку в одном личном пространстве.
-            </h1>
-            <p className={styles.workspaceLead}>
-              Код комнаты, история результатов, процент успешности и подробный разбор ответов теперь собраны
-              в одном аккуратном кабинете без лишних экранов.
-            </p>
-
-            <div className={styles.workspacePillRow}>
-              <span className={styles.workspacePill}>Попыток {attemptsStats.total}</span>
-              <span className={styles.workspacePill}>Live {attemptsStats.liveTotal}</span>
-              <span className={styles.workspacePill}>Лучший результат {attemptsStats.bestPercentage}%</span>
-            </div>
-          </div>
-
-          <aside className={styles.workspaceHeroAside}>
-            <section className={styles.commandCard}>
-              <div className={styles.commandHeader}>
-                <h2 className={styles.commandTitle}>Войти по коду комнаты</h2>
-                <p className={styles.commandText}>
-                  Введите код комнаты и сразу перейдите в эфир, где вопросы и таймер синхронизируются в реальном времени.
-                </p>
-              </div>
-
-              <form className={styles.commandForm} onSubmit={handleJoinQuiz}>
-                <input
-                  className={styles.commandInput}
-                  type="text"
-                  value={joinCode}
-                  onChange={(event) => setJoinCode(event.target.value)}
-                  placeholder="Например A1B2C3"
-                  maxLength={20}
-                />
-                <button type="submit" className={styles.commandButton}>
-                  Открыть live-квиз
-                </button>
-              </form>
-              {joinError && <p className={styles.formError}>{joinError}</p>}
-            </section>
-
-            <div className={styles.noteStack}>
-              {SHOWCASE_NOTES.map((note) => (
-                <article key={note.label} className={styles.utilityNote}>
-                  <p className={styles.utilityNoteLabel}>{note.label}</p>
-                  <p className={styles.utilityNoteText}>{note.text}</p>
-                </article>
-              ))}
-            </div>
-          </aside>
-        </section>
+        <WorkspaceHeroSection
+          firstName={firstName}
+          attemptsTotal={attemptsStats.total}
+          liveAttemptsTotal={attemptsStats.liveTotal}
+          bestPercentage={attemptsStats.bestPercentage}
+          joinCode={joinCode}
+          joinError={joinError}
+          notes={SHOWCASE_NOTES}
+          onJoinCodeChange={(event) => setJoinCode(event.target.value)}
+          onJoin={handleJoinQuiz}
+        />
 
         <FeatureDeckSection signals={PARTICIPANT_SIGNALS} />
 
