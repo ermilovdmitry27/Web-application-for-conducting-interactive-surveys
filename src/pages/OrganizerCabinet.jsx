@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
+import FeatureDeckSection from "./organizer-cabinet/FeatureDeckSection";
 import {
   AUTH_USER_UPDATED_EVENT,
   ORGANIZER_NOTES,
@@ -304,15 +305,7 @@ export default function OrganizerCabinet() {
           </aside>
         </section>
 
-        <section className={styles.featureDeck}>
-          {ORGANIZER_SIGNALS.map((item) => (
-            <article key={item.title} className={styles.featureDeckCard}>
-              <p className={styles.featureDeckLabel}>{item.label}</p>
-              <h2 className={styles.featureDeckTitle}>{item.title}</h2>
-              <p className={styles.featureDeckText}>{item.text}</p>
-            </article>
-          ))}
-        </section>
+        <FeatureDeckSection signals={ORGANIZER_SIGNALS} />
       </section>
 
       <section className={styles.blocks}>
