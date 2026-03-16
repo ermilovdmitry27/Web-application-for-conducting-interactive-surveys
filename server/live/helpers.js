@@ -190,6 +190,93 @@ function buildLiveSessionState({
   };
 }
 
+function buildLiveAttemptAnswers(context, answerRows = []) {
+  const questions = Array.isArray(context?.quiz?.questions) ? context.quiz.questions : [];
+  const questionCount = questions.length;
+  const rowsByQuestionIndex = new Map();
+
+  answerRows.forEach((row) => {
+    const questionIndex = Number(row.question_index);
+    if (!Number.isInteger(questionIndex) || questionIndex < 0) {
+      return;
+    }
+    rowsByQuestionIndex.set(questionIndex, row);
+  });
+
+  return Array.from({ length: questionCount }, (_value, questionIndex) => {
+    const liveQuestion = getLiveQuestionBySessionIndex(context.session, context.quiz, questionIndex);
+    if (!liveQuestion) {
+      return null;
+    }
+
+    const row = rowsByQuestionIndex.get(questionIndex);
+    const optionIds = Array.isArray(row?.selected_option_ids_json)
+      ? row.selected_option_ids_json
+          .map((value) => Number(value))
+          .filter((value) => Number.isInteger(value) && value >= 1)
+      : [];
+    const optionIdSet = new Set(optionIds);
+    const optionTexts = liveQuestion.question.options
+      .filter((option) => optionIdSet.has(option.id))
+      .map((option) => option.text);
+
+    return {
+      questionId: liveQuestion.question.id,
+      questionPosition: questionIndex + 1,
+      prompt: liveQuestion.question.prompt,
+      type: liveQuestion.question.type,
+      answerMode: liveQuestion.question.answerMode,
+      optionIds,
+      optionTexts,
+      isCorrect: Boolean(row?.is_correct),
+      wasAnswered: optionIds.length > 0,
+      submittedAfterSeconds: Math.max(0, Number(row?.submitted_after_seconds || 0)),
+      submittedAt: row?.submitted_at || null,
+    };
+  }).filter(Boolean);
+}
+
+function getLiveAttemptTimeSpentSeconds(context, participantJoinedAt, answerRows = []) {
+  const startedAtMs = new Date(participantJoinedAt || context?.session?.startedAt || "").getTime();
+  if (!Number.isFinite(startedAtMs) || startedAtMs <= 0) {
+    return 0;
+  }
+
+  const lastAnswerRow = [...answerRows]
+    .filter((row) => row?.submitted_at)
+    .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())[0];
+  const endAtRaw = lastAnswerRow?.submitted_at || context?.session?.finishedAt || context?.session?.startedAt;
+  const endAtMs = new Date(endAtRaw || "").getTime();
+  if (!Number.isFinite(endAtMs) || endAtMs <= startedAtMs) {
+    return 0;
+  }
+
+  return Math.max(0, Math.round((endAtMs - startedAtMs) / 1000));
+}
+
+function buildLiveStatePair(context, participants = [], answeredParticipants = []) {
+  const organizerState = buildLiveSessionState({
+    session: context.session,
+    quiz: context.quiz,
+    participantsCount: context.participantsCount,
+    participants,
+    answeredParticipants,
+    includeCorrect: true,
+  });
+  const participantState = buildLiveSessionState({
+    session: context.session,
+    quiz: context.quiz,
+    participantsCount: context.participantsCount,
+    participants: [],
+    answeredParticipants: [],
+    includeCorrect: false,
+  });
+  return {
+    organizerState,
+    participantState,
+  };
+}
+
 module.exports = {
   buildDefaultQuestionOrder,
   normalizeQuestionOrder,
@@ -200,4 +287,7 @@ module.exports = {
   getLiveQuestionResponseSeconds,
   toLiveQuestionPayload,
   buildLiveSessionState,
+  buildLiveAttemptAnswers,
+  getLiveAttemptTimeSpentSeconds,
+  buildLiveStatePair,
 };
