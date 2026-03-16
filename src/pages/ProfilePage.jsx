@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
+import { getApiBaseUrl } from "../lib/api/config";
+import { requestWithAuth as sharedRequestWithAuth } from "../lib/api/requestWithAuth";
 
 const AUTH_USER_UPDATED_EVENT = "auth-user-updated";
 const DEFAULT_MAX_AVATAR_SIZE = 2 * 1024 * 1024;
@@ -61,6 +63,7 @@ export default function ProfilePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
+  const apiBaseUrl = getApiBaseUrl();
 
   useEffect(() => {
     const handleAuthUserUpdated = (event) => {
@@ -93,33 +96,18 @@ export default function ProfilePage() {
   };
 
   const requestWithAuth = async (path, options = {}) => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) {
-      throw new Error("Сессия истекла. Войдите заново.");
-    }
-
-    const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:4000";
-    let response;
     try {
-      response = await fetch(`${apiBaseUrl}${path}`, {
-        ...options,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          ...(options.headers || {}),
-        },
-      });
-    } catch (_error) {
-      throw new Error("Нет связи с API. Запустите сервер: npm run server");
-    }
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      if (response.status === 404 && path === "/api/users/me/profile") {
+      return await sharedRequestWithAuth(`${apiBaseUrl}${path}`, options);
+    } catch (error) {
+      const message = String(error?.message || "");
+      if (path === "/api/users/me/profile" && message === "Ошибка запроса (404).") {
         throw new Error("Профиль не удалось сохранить: backend не перезапущен. Запустите npm run server.");
       }
-      throw new Error(data.message || "Не удалось сохранить изменения.");
+      if (/^Ошибка запроса \(\d+\)\.$/.test(message)) {
+        throw new Error("Не удалось сохранить изменения.");
+      }
+      throw error;
     }
-    return data;
   };
 
   const saveProfileToServer = async (payload) => {
