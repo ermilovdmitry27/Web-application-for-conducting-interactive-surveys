@@ -6,9 +6,9 @@ import CabinetTopMenu from "../components/CabinetTopMenu";
 import { getApiBaseUrl } from "../lib/api/config";
 import { requestWithAuth } from "../lib/api/requestWithAuth";
 import QuizBasicsSection from "./create-quiz/QuizBasicsSection";
+import QuestionFlowSection from "./create-quiz/QuestionFlowSection";
 import QuizHeroSection from "./create-quiz/QuizHeroSection";
 import QuizTimingSection from "./create-quiz/QuizTimingSection";
-import QuestionCard from "./create-quiz/QuestionCard";
 import QuizRulesSection from "./create-quiz/QuizRulesSection";
 import {
   CATEGORY_OPTIONS,
@@ -525,37 +525,19 @@ export default function CreateQuizPage() {
               onShuffleQuestionsChange={(event) => setShuffleQuestions(event.target.checked)}
             />
 
-            <section className={styles.sectionPanel}>
-              <div className={styles.sectionHeader}>
-                <p className={styles.sectionEyebrow}>Question flow</p>
-                <h2 className={styles.sectionTitle}>Сценарий вопросов</h2>
-                <p className={styles.sectionText}>
-                  Для каждого шага можно выбрать тип вопроса, режим ответа, изображение и набор правильных вариантов.
-                </p>
-              </div>
-
-              <div className={styles.questionsWrap}>
-                {questions.map((question, questionIndex) => {
-                  return (
-                    <QuestionCard
-                      key={questionIndex}
-                      questionIndex={questionIndex}
-                      question={question}
-                      uploadState={questionUploadStates[questionIndex]}
-                      isSubmitting={isSubmitting}
-                      onQuestionField={handleQuestionField}
-                      onAnswerModeChange={handleAnswerModeChange}
-                      onQuestionImageSelected={handleQuestionImageSelected}
-                      onQuestionImageRemove={handleQuestionImageRemove}
-                      onOptionTextChange={handleOptionTextChange}
-                      onOptionCorrectToggle={handleOptionCorrectToggle}
-                      onAddOption={handleAddOption}
-                      onRemoveOption={handleRemoveOption}
-                    />
-                  );
-                })}
-              </div>
-            </section>
+            <QuestionFlowSection
+              questions={questions}
+              questionUploadStates={questionUploadStates}
+              isSubmitting={isSubmitting}
+              onQuestionField={handleQuestionField}
+              onAnswerModeChange={handleAnswerModeChange}
+              onQuestionImageSelected={handleQuestionImageSelected}
+              onQuestionImageRemove={handleQuestionImageRemove}
+              onOptionTextChange={handleOptionTextChange}
+              onOptionCorrectToggle={handleOptionCorrectToggle}
+              onAddOption={handleAddOption}
+              onRemoveOption={handleRemoveOption}
+            />
 
             {submitError && <p className={styles.errorText}>{submitError}</p>}
 
