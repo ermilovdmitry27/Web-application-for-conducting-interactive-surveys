@@ -3,32 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
 import { buildWebSocketUrl, parseWebSocketMessage } from "../lib/websocket";
-
-function getStoredUser() {
-  try {
-    const raw = localStorage.getItem("auth_user");
-    return raw ? JSON.parse(raw) : null;
-  } catch (_error) {
-    return null;
-  }
-}
-
-function getLiveStatusLabel(status, isPaused) {
-  if (status === "finished") {
-    return "Завершен";
-  }
-  if (isPaused) {
-    return "Пауза";
-  }
-  return "Идет";
-}
-
-function formatSeconds(totalSeconds) {
-  const safe = Math.max(0, Number(totalSeconds) || 0);
-  const minutes = Math.floor(safe / 60);
-  const seconds = safe % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
+import LiveHeroSection from "./organizer-live/LiveHeroSection";
+import { formatSeconds, getLiveStatusLabel, getStoredUser } from "./organizer-live/utils";
 
 export default function OrganizerLivePage() {
   const navigate = useNavigate();
@@ -486,6 +462,15 @@ export default function OrganizerLivePage() {
     }
     return Number(session.currentQuestionIndex || 0) + 1;
   }, [session]);
+  const statusLabel = getLiveStatusLabel(session?.status, session?.isPaused);
+  const progressValue =
+    session?.status === "running" && session?.isLiveStarted
+      ? `${currentQuestionPosition}/${session.questionCount}`
+      : "Lobby";
+  const progressText =
+    session?.status === "running" && session?.isLiveStarted
+      ? "Текущая позиция в сценарии live-квиза."
+      : "Участники могут подключаться до начала эфира.";
 
   const handleLogout = () => {
     localStorage.removeItem("auth_token");
@@ -525,7 +510,7 @@ export default function OrganizerLivePage() {
                 session?.status === "finished" ? styles.liveStatusFinished : styles.liveStatusRunning
               }`}
             >
-              {getLiveStatusLabel(session?.status, session?.isPaused)}
+              {statusLabel}
             </span>
             <span className={styles.liveWsStatus}>WS: {wsStatus}</span>
           </div>
@@ -536,47 +521,16 @@ export default function OrganizerLivePage() {
 
         {!isLoading && !loadError && session && (
           <>
-            <section className={styles.liveHeroPanel}>
-              <div className={styles.liveHeroCopy}>
-                <p className={styles.sectionEyebrow}>Live control room</p>
-                <h1 className={styles.title}>{session.quizTitle}</h1>
-                <p className={styles.sectionLead}>
-                  Управляйте стартом, паузой и переходом между вопросами, а также наблюдайте за тем, как участники
-                  отвечают в реальном времени.
-                </p>
-              </div>
-
-              <div className={styles.liveMetricGrid}>
-                <article className={styles.liveMetricCard}>
-                  <p className={styles.liveMetricLabel}>Комната</p>
-                  <p className={styles.liveMetricValue}>{session.joinCode}</p>
-                  <p className={styles.liveMetricText}>Код подключения для участников текущего эфира.</p>
-                </article>
-                <article className={styles.liveMetricCard}>
-                  <p className={styles.liveMetricLabel}>Участники</p>
-                  <p className={styles.liveMetricValue}>{session.participantsCount}</p>
-                  <p className={styles.liveMetricText}>Подключенные игроки в комнате прямо сейчас.</p>
-                </article>
-                <article className={styles.liveMetricCard}>
-                  <p className={styles.liveMetricLabel}>Статус</p>
-                  <p className={styles.liveMetricValue}>{getLiveStatusLabel(session.status, session.isPaused)}</p>
-                  <p className={styles.liveMetricText}>WS: {wsStatus} • Событие: {lastWsEvent}</p>
-                </article>
-                <article className={styles.liveMetricCard}>
-                  <p className={styles.liveMetricLabel}>Прогресс</p>
-                  <p className={styles.liveMetricValue}>
-                    {session.status === "running" && session.isLiveStarted
-                      ? `${currentQuestionPosition}/${session.questionCount}`
-                      : "Lobby"}
-                  </p>
-                  <p className={styles.liveMetricText}>
-                    {session.status === "running" && session.isLiveStarted
-                      ? "Текущая позиция в сценарии live-квиза."
-                      : "Участники могут подключаться до начала эфира."}
-                  </p>
-                </article>
-              </div>
-            </section>
+            <LiveHeroSection
+              quizTitle={session.quizTitle}
+              joinCode={session.joinCode}
+              participantsCount={session.participantsCount}
+              statusLabel={statusLabel}
+              wsStatus={wsStatus}
+              lastWsEvent={lastWsEvent}
+              progressValue={progressValue}
+              progressText={progressText}
+            />
 
             {actionError && <p className={styles.formError}>{actionError}</p>}
 
