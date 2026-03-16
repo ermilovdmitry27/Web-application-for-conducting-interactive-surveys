@@ -4,49 +4,16 @@ import styles from "../css/CabinetPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
 import { getApiBaseUrl } from "../lib/api/config";
 import { requestWithAuth as sharedRequestWithAuth } from "../lib/api/requestWithAuth";
-
-const AUTH_USER_UPDATED_EVENT = "auth-user-updated";
-const DEFAULT_MAX_AVATAR_SIZE = 2 * 1024 * 1024;
-const MAX_AVATAR_SIZE = Number(process.env.REACT_APP_MAX_AVATAR_SIZE || DEFAULT_MAX_AVATAR_SIZE);
-
-function getStoredUser() {
-  try {
-    const raw = localStorage.getItem("auth_user");
-    return raw ? JSON.parse(raw) : null;
-  } catch (_error) {
-    return null;
-  }
-}
-
-function normalizeNamePart(value) {
-  return typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
-}
-
-function splitFullName(value) {
-  const parts = normalizeNamePart(value).split(/\s+/).filter(Boolean);
-  return {
-    lastName: parts[0] || "",
-    firstName: parts[1] || parts[0] || "",
-    middleName: parts.slice(2).join(" "),
-  };
-}
-
-function buildNormalizedUser(rawUser) {
-  const source = rawUser || {};
-  const fallback = splitFullName(source.name);
-  return {
-    ...source,
-    firstName: normalizeNamePart(source.firstName) || fallback.firstName,
-    lastName: normalizeNamePart(source.lastName) || fallback.lastName,
-    middleName: normalizeNamePart(source.middleName) || fallback.middleName,
-    email: typeof source.email === "string" ? source.email.trim().toLowerCase() : "",
-    avatarDataUrl: source.avatarDataUrl || "",
-  };
-}
-
-function formatMegabytes(bytes) {
-  return (bytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, "");
-}
+import {
+  AUTH_USER_UPDATED_EVENT,
+  MAX_AVATAR_SIZE,
+} from "./profile/constants";
+import {
+  buildNormalizedUser,
+  formatMegabytes,
+  getStoredUser,
+  normalizeNamePart,
+} from "./profile/utils";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
