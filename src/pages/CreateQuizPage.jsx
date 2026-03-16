@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import cabinetStyles from "../css/CabinetPage.module.css";
 import styles from "../css/CreateQuizPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
+import QuizBasicsSection from "./create-quiz/QuizBasicsSection";
 import QuestionCard from "./create-quiz/QuestionCard";
 import QuizRulesSection from "./create-quiz/QuizRulesSection";
 import {
@@ -535,57 +536,15 @@ export default function CreateQuizPage() {
               </div>
             </div>
 
-            <section className={styles.sectionPanel}>
-              <div className={styles.sectionHeader}>
-                <p className={styles.sectionEyebrow}>Base setup</p>
-                <h2 className={styles.sectionTitle}>Основа квиза</h2>
-                <p className={styles.sectionText}>
-                  Название, категория и описание формируют карточку квиза в кабинете и помогают отличать сценарии друг от друга.
-                </p>
-              </div>
-
-              <div className={styles.gridTwo}>
-                <label className={styles.label}>
-                  Название квиза
-                  <input
-                    className={styles.input}
-                    type="text"
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                    maxLength={120}
-                    placeholder="Например: История России"
-                    required
-                  />
-                </label>
-
-                <label className={styles.label}>
-                  Категория
-                  <select
-                    className={styles.input}
-                    value={category}
-                    onChange={(event) => setCategory(event.target.value)}
-                  >
-                    {categoryOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <label className={styles.label}>
-                Описание
-                <textarea
-                  className={styles.textarea}
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  rows={3}
-                  maxLength={1000}
-                  placeholder="Кратко опишите, о чем квиз и для кого он"
-                />
-              </label>
-            </section>
+            <QuizBasicsSection
+              title={title}
+              description={description}
+              category={category}
+              categoryOptions={categoryOptions}
+              onTitleChange={(event) => setTitle(event.target.value)}
+              onCategoryChange={(event) => setCategory(event.target.value)}
+              onDescriptionChange={(event) => setDescription(event.target.value)}
+            />
 
             <section className={styles.sectionPanel}>
               <div className={styles.sectionHeader}>
