@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
+import { getApiBaseUrl } from "../lib/api/config";
+import { requestWithAuth } from "../lib/api/requestWithAuth";
 import { buildWebSocketUrl, parseWebSocketMessage } from "../lib/websocket";
 import FinishedLeaderboardPanel from "./organizer-live/FinishedLeaderboardPanel";
 import LiveHeroSection from "./organizer-live/LiveHeroSection";
@@ -13,7 +15,7 @@ export default function OrganizerLivePage() {
   const { quizId: rawQuizId = "" } = useParams();
   const quizId = Number(rawQuizId);
   const user = getStoredUser();
-  const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:4000";
+  const apiBaseUrl = getApiBaseUrl();
 
   const [session, setSession] = useState(null);
   const [leaderboard, setLeaderboard] = useState(null);
@@ -31,33 +33,6 @@ export default function OrganizerLivePage() {
 
   const wsRef = useRef(null);
 
-  const requestWithAuth = useCallback(async (url, options = {}) => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) {
-      throw new Error("Сессия истекла. Войдите заново.");
-    }
-
-    let response;
-    try {
-      response = await fetch(url, {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          ...(options.headers || {}),
-        },
-      });
-    } catch (_error) {
-      throw new Error("Нет связи с API. Запустите сервер: npm run server");
-    }
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.message || `Ошибка запроса (${response.status}).`);
-    }
-    return data;
-  }, []);
-
   const refreshLeaderboard = useCallback(
     async (sessionId) => {
       if (!sessionId) {
@@ -73,7 +48,7 @@ export default function OrganizerLivePage() {
         // silent: leaderboard can already be delivered by websocket
       }
     },
-    [apiBaseUrl, requestWithAuth]
+    [apiBaseUrl]
   );
 
   const refreshSessionState = useCallback(
@@ -91,7 +66,7 @@ export default function OrganizerLivePage() {
         setLeaderboard(data.leaderboard);
       }
     },
-    [apiBaseUrl, requestWithAuth]
+    [apiBaseUrl]
   );
 
   useEffect(() => {
@@ -138,7 +113,7 @@ export default function OrganizerLivePage() {
     return () => {
       isMounted = false;
     };
-  }, [apiBaseUrl, quizId, refreshLeaderboard, requestWithAuth]);
+  }, [apiBaseUrl, quizId, refreshLeaderboard]);
 
   useEffect(() => {
     const sessionId = Number(session?.sessionId);

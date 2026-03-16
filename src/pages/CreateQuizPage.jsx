@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import cabinetStyles from "../css/CabinetPage.module.css";
 import styles from "../css/CreateQuizPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
+import { getApiBaseUrl } from "../lib/api/config";
+import { requestWithAuth } from "../lib/api/requestWithAuth";
 import QuizBasicsSection from "./create-quiz/QuizBasicsSection";
 import QuestionCard from "./create-quiz/QuestionCard";
 import QuizRulesSection from "./create-quiz/QuizRulesSection";
@@ -41,7 +43,7 @@ export default function CreateQuizPage() {
   const navigate = useNavigate();
   const { quizId: rawQuizId = "" } = useParams();
   const user = getStoredUser();
-  const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:4000";
+  const apiBaseUrl = getApiBaseUrl();
   const quizId = Number(rawQuizId);
   const isEditMode = Number.isInteger(quizId) && quizId > 0;
 
@@ -84,33 +86,6 @@ export default function CreateQuizPage() {
     const matched = categoryOptions.find((option) => option.value === category);
     return matched?.label || category;
   }, [category, categoryOptions]);
-
-  const requestWithAuth = useCallback(async (url, options = {}) => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) {
-      throw new Error("Сессия истекла. Войдите заново.");
-    }
-
-    let response;
-    try {
-      response = await fetch(url, {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          ...(options.headers || {}),
-        },
-      });
-    } catch (_error) {
-      throw new Error("Нет связи с API. Запустите сервер: npm run server");
-    }
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.message || `Ошибка запроса (${response.status}).`);
-    }
-    return data;
-  }, []);
 
   const updateQuestionUploadState = useCallback((questionIndex, patch) => {
     setQuestionUploadStates((prev) => ({
@@ -181,7 +156,7 @@ export default function CreateQuizPage() {
     return () => {
       isMounted = false;
     };
-  }, [apiBaseUrl, isEditMode, quizId, requestWithAuth]);
+  }, [apiBaseUrl, isEditMode, quizId]);
 
   const handleQuestionCountChange = (event) => {
     const rawValue = Number(event.target.value);

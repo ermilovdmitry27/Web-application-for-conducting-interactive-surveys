@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
+import { getApiBaseUrl } from "../lib/api/config";
+import { requestWithAuth } from "../lib/api/requestWithAuth";
 import { buildWebSocketUrl, parseWebSocketMessage } from "../lib/websocket";
 import LiveHeroSection from "./participant-quiz/LiveHeroSection";
 import LiveQueuePanel from "./participant-quiz/LiveQueuePanel";
@@ -12,7 +14,7 @@ export default function ParticipantQuizPage() {
   const { joinCode: rawJoinCode = "" } = useParams();
   const joinCode = String(rawJoinCode).trim().toUpperCase();
   const user = getStoredUser();
-  const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:4000";
+  const apiBaseUrl = getApiBaseUrl();
 
   const [session, setSession] = useState(null);
   const [leaderboard, setLeaderboard] = useState(null);
@@ -33,33 +35,6 @@ export default function ParticipantQuizPage() {
 
   const wsRef = useRef(null);
 
-  const requestWithAuth = useCallback(async (url, options = {}) => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) {
-      throw new Error("Сессия истекла. Войдите заново.");
-    }
-
-    let response;
-    try {
-      response = await fetch(url, {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          ...(options.headers || {}),
-        },
-      });
-    } catch (_error) {
-      throw new Error("Нет связи с API. Запустите сервер: npm run server");
-    }
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.message || `Ошибка запроса (${response.status}).`);
-    }
-    return data;
-  }, []);
-
   const refreshLeaderboard = useCallback(
     async (sessionId) => {
       if (!sessionId) {
@@ -75,7 +50,7 @@ export default function ParticipantQuizPage() {
         // silent fallback: leaderboard may arrive via websocket event
       }
     },
-    [apiBaseUrl, requestWithAuth]
+    [apiBaseUrl]
   );
 
   const refreshSessionState = useCallback(
@@ -93,7 +68,7 @@ export default function ParticipantQuizPage() {
         setLeaderboard(data.leaderboard);
       }
     },
-    [apiBaseUrl, requestWithAuth]
+    [apiBaseUrl]
   );
 
   useEffect(() => {
@@ -148,7 +123,7 @@ export default function ParticipantQuizPage() {
     return () => {
       isMounted = false;
     };
-  }, [apiBaseUrl, joinCode, refreshLeaderboard, requestWithAuth]);
+  }, [apiBaseUrl, joinCode, refreshLeaderboard]);
 
   const sessionStartedAt = session?.startedAt;
   const sessionStatus = session?.status;
