@@ -1,0 +1,967 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import cabinetStyles from "../css/CabinetPage.module.css";
+import styles from "../css/CreateQuizPage.module.css";
+import CabinetTopMenu from "../components/CabinetTopMenu";
+
+const CATEGORY_OPTIONS = [
+  { value: "history", label: "История" },
+  { value: "science", label: "Наука" },
+  { value: "it", label: "IT" },
+  { value: "literature", label: "Литература" },
+  { value: "mixed", label: "Смешанная" },
+];
+
+const MIN_QUESTIONS = 1;
+const MAX_QUESTIONS = 50;
+const MIN_OPTIONS = 2;
+const MAX_OPTIONS = 8;
+const DEFAULT_QUESTIONS = 3;
+const DEFAULT_DURATION_MINUTES = 15;
+const MAX_DURATION_MINUTES = 240;
+const DEFAULT_QUESTION_TIME_SECONDS = 30;
+const MIN_QUESTION_TIME_SECONDS = 5;
+const MAX_QUESTION_TIME_SECONDS = 600;
+const DEFAULT_MAX_ATTEMPTS = 1;
+const MAX_ATTEMPTS_PER_PARTICIPANT = 10;
+const QUESTION_IMAGE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
+const QUESTION_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+
+function getStoredUser() {
+  try {
+    const raw = localStorage.getItem("auth_user");
+    return raw ? JSON.parse(raw) : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function createEmptyOption() {
+  return {
+    text: "",
+    isCorrect: false,
+  };
+}
+
+function createEmptyQuestion() {
+  return {
+    type: "text",
+    prompt: "",
+    imageUrl: "",
+    answerMode: "single",
+    options: [createEmptyOption(), createEmptyOption()],
+  };
+}
+
+function buildQuestions(nextCount, currentQuestions = []) {
+  const safeCount = Math.max(MIN_QUESTIONS, Math.min(MAX_QUESTIONS, nextCount));
+  const questions = [...currentQuestions];
+  while (questions.length < safeCount) {
+    questions.push(createEmptyQuestion());
+  }
+  return questions.slice(0, safeCount);
+}
+
+function normalizeQuestionForForm(rawQuestion) {
+  if (!rawQuestion || typeof rawQuestion !== "object") {
+    return createEmptyQuestion();
+  }
+
+  const type = rawQuestion.type === "image" ? "image" : "text";
+  const answerMode = rawQuestion.answerMode === "multiple" ? "multiple" : "single";
+  const prompt = typeof rawQuestion.prompt === "string" ? rawQuestion.prompt : "";
+  const imageUrl = typeof rawQuestion.imageUrl === "string" ? rawQuestion.imageUrl : "";
+
+  let options = Array.isArray(rawQuestion.options)
+    ? rawQuestion.options
+        .map((option) => {
+          const text = typeof option?.text === "string" ? option.text : "";
+          return {
+            text,
+            isCorrect: Boolean(option?.isCorrect),
+          };
+        })
+        .filter((option) => option.text.trim().length > 0)
+    : [];
+
+  if (options.length < MIN_OPTIONS) {
+    options = [...options];
+    while (options.length < MIN_OPTIONS) {
+      options.push(createEmptyOption());
+    }
+  }
+  if (options.length > MAX_OPTIONS) {
+    options = options.slice(0, MAX_OPTIONS);
+  }
+
+  if (answerMode === "single") {
+    let foundCorrect = false;
+    options = options.map((option) => {
+      if (option.isCorrect && !foundCorrect) {
+        foundCorrect = true;
+        return option;
+      }
+      return {
+        ...option,
+        isCorrect: false,
+      };
+    });
+    if (!foundCorrect && options.length > 0) {
+      options[0] = {
+        ...options[0],
+        isCorrect: true,
+      };
+    }
+  }
+
+  return {
+    type,
+    prompt,
+    imageUrl,
+    answerMode,
+    options,
+  };
+}
+
+function normalizeQuestionsForForm(rawQuestions) {
+  const source = Array.isArray(rawQuestions) ? rawQuestions : [];
+  if (source.length === 0) {
+    return buildQuestions(DEFAULT_QUESTIONS, []);
+  }
+  const normalized = source.map((question) => normalizeQuestionForForm(question));
+  return buildQuestions(normalized.length, normalized);
+}
+
+export default function CreateQuizPage() {
+  const navigate = useNavigate();
+  const { quizId: rawQuizId = "" } = useParams();
+  const user = getStoredUser();
+  const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:4000";
+  const quizId = Number(rawQuizId);
+  const isEditMode = Number.isInteger(quizId) && quizId > 0;
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState(CATEGORY_OPTIONS[0].value);
+  const [durationMinutes, setDurationMinutes] = useState(DEFAULT_DURATION_MINUTES);
+  const [questionTimeSeconds, setQuestionTimeSeconds] = useState(DEFAULT_QUESTION_TIME_SECONDS);
+  const [maxAttempts, setMaxAttempts] = useState(DEFAULT_MAX_ATTEMPTS);
+  const [questionCount, setQuestionCount] = useState(DEFAULT_QUESTIONS);
+  const [isActive, setIsActive] = useState(true);
+  const [allowBackNavigation, setAllowBackNavigation] = useState(false);
+  const [showCorrectAfterAnswer, setShowCorrectAfterAnswer] = useState(false);
+  const [shuffleQuestions, setShuffleQuestions] = useState(false);
+  const [questions, setQuestions] = useState(() =>
+    buildQuestions(DEFAULT_QUESTIONS, [])
+  );
+
+  const [isPageLoading, setIsPageLoading] = useState(isEditMode);
+  const [pageError, setPageError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [questionUploadStates, setQuestionUploadStates] = useState({});
+
+  const totalOptions = useMemo(
+    () => questions.reduce((sum, question) => sum + question.options.length, 0),
+    [questions]
+  );
+  const categoryOptions = useMemo(() => {
+    const normalized = String(category || "").trim();
+    if (!normalized) {
+      return CATEGORY_OPTIONS;
+    }
+    if (CATEGORY_OPTIONS.some((option) => option.value === normalized)) {
+      return CATEGORY_OPTIONS;
+    }
+    return [{ value: normalized, label: normalized }, ...CATEGORY_OPTIONS];
+  }, [category]);
+  const selectedCategoryLabel = useMemo(() => {
+    const matched = categoryOptions.find((option) => option.value === category);
+    return matched?.label || category;
+  }, [category, categoryOptions]);
+
+  const requestWithAuth = useCallback(async (url, options = {}) => {
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      throw new Error("Сессия истекла. Войдите заново.");
+    }
+
+    let response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          ...(options.headers || {}),
+        },
+      });
+    } catch (_error) {
+      throw new Error("Нет связи с API. Запустите сервер: npm run server");
+    }
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || `Ошибка запроса (${response.status}).`);
+    }
+    return data;
+  }, []);
+
+  const updateQuestionUploadState = useCallback((questionIndex, patch) => {
+    setQuestionUploadStates((prev) => ({
+      ...prev,
+      [questionIndex]: {
+        ...(prev[questionIndex] || {}),
+        ...patch,
+      },
+    }));
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_user");
+    navigate("/login", { replace: true });
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadQuizForEdit = async () => {
+      if (!isEditMode) {
+        setIsPageLoading(false);
+        setPageError("");
+        return;
+      }
+
+      try {
+        setIsPageLoading(true);
+        setPageError("");
+        const data = await requestWithAuth(`${apiBaseUrl}/api/quizzes/${quizId}`, {
+          method: "GET",
+        });
+        const quiz = data?.quiz;
+        if (!quiz || typeof quiz !== "object") {
+          throw new Error("Не удалось загрузить данные квиза.");
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        const normalizedQuestions = normalizeQuestionsForForm(quiz.questions);
+        setTitle(typeof quiz.title === "string" ? quiz.title : "");
+        setDescription(typeof quiz.description === "string" ? quiz.description : "");
+        setCategory(typeof quiz.category === "string" && quiz.category ? quiz.category : CATEGORY_OPTIONS[0].value);
+        setDurationMinutes(Number(quiz.durationMinutes || DEFAULT_DURATION_MINUTES));
+        setQuestionTimeSeconds(Number(quiz.questionTimeSeconds || DEFAULT_QUESTION_TIME_SECONDS));
+        setMaxAttempts(Number(quiz.maxAttemptsPerParticipant || DEFAULT_MAX_ATTEMPTS));
+        setIsActive(Boolean(quiz.isActive));
+        setAllowBackNavigation(Boolean(quiz.rules?.allowBackNavigation));
+        setShowCorrectAfterAnswer(Boolean(quiz.rules?.showCorrectAfterAnswer));
+        setShuffleQuestions(Boolean(quiz.rules?.shuffleQuestions));
+        setQuestionCount(normalizedQuestions.length);
+        setQuestions(normalizedQuestions);
+      } catch (error) {
+        if (isMounted) {
+          setPageError(error.message || "Не удалось загрузить квиз для редактирования.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsPageLoading(false);
+        }
+      }
+    };
+
+    loadQuizForEdit();
+    return () => {
+      isMounted = false;
+    };
+  }, [apiBaseUrl, isEditMode, quizId, requestWithAuth]);
+
+  const handleQuestionCountChange = (event) => {
+    const rawValue = Number(event.target.value);
+    const safeCount = Number.isInteger(rawValue)
+      ? Math.max(MIN_QUESTIONS, Math.min(MAX_QUESTIONS, rawValue))
+      : MIN_QUESTIONS;
+    setQuestionCount(safeCount);
+    setQuestions((prev) => buildQuestions(safeCount, prev));
+  };
+
+  const updateQuestion = (questionIndex, updater) => {
+    setQuestions((prev) =>
+      prev.map((question, currentIndex) =>
+        currentIndex === questionIndex ? updater(question) : question
+      )
+    );
+  };
+
+  const handleQuestionField = (questionIndex, field, value) => {
+    updateQuestion(questionIndex, (question) => ({
+      ...question,
+      [field]: value,
+    }));
+  };
+
+  const handleQuestionImageSelected = async (questionIndex, event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+
+    if (!QUESTION_IMAGE_TYPES.has(file.type)) {
+      updateQuestionUploadState(questionIndex, {
+        isUploading: false,
+        error: "Допустимы только изображения PNG, JPG, WEBP или GIF.",
+      });
+      return;
+    }
+
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      updateQuestionUploadState(questionIndex, {
+        isUploading: false,
+        error: "Сессия истекла. Войдите заново.",
+      });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      updateQuestionUploadState(questionIndex, {
+        isUploading: true,
+        error: "",
+      });
+
+      const response = await fetch(`${apiBaseUrl}/api/uploads/question-image`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.message || "Не удалось загрузить изображение.");
+      }
+
+      handleQuestionField(questionIndex, "imageUrl", typeof data.imageUrl === "string" ? data.imageUrl : "");
+      updateQuestionUploadState(questionIndex, {
+        isUploading: false,
+        error: "",
+      });
+    } catch (error) {
+      updateQuestionUploadState(questionIndex, {
+        isUploading: false,
+        error: error.message || "Не удалось загрузить изображение.",
+      });
+    }
+  };
+
+  const handleQuestionImageRemove = (questionIndex) => {
+    handleQuestionField(questionIndex, "imageUrl", "");
+    updateQuestionUploadState(questionIndex, {
+      isUploading: false,
+      error: "",
+    });
+  };
+
+  const handleAnswerModeChange = (questionIndex, nextMode) => {
+    updateQuestion(questionIndex, (question) => {
+      const normalizedMode = nextMode === "multiple" ? "multiple" : "single";
+      let nextOptions = question.options;
+
+      if (normalizedMode === "single") {
+        let found = false;
+        nextOptions = question.options.map((option) => {
+          if (!found && option.isCorrect) {
+            found = true;
+            return option;
+          }
+          return {
+            ...option,
+            isCorrect: false,
+          };
+        });
+      }
+
+      return {
+        ...question,
+        answerMode: normalizedMode,
+        options: nextOptions,
+      };
+    });
+  };
+
+  const handleOptionTextChange = (questionIndex, optionIndex, value) => {
+    updateQuestion(questionIndex, (question) => ({
+      ...question,
+      options: question.options.map((option, currentOptionIndex) =>
+        currentOptionIndex === optionIndex ? { ...option, text: value } : option
+      ),
+    }));
+  };
+
+  const handleOptionCorrectToggle = (questionIndex, optionIndex) => {
+    updateQuestion(questionIndex, (question) => {
+      const isSingle = question.answerMode === "single";
+      const nextOptions = question.options.map((option, currentOptionIndex) => {
+        if (currentOptionIndex !== optionIndex) {
+          return isSingle ? { ...option, isCorrect: false } : option;
+        }
+        if (isSingle) {
+          return { ...option, isCorrect: true };
+        }
+        return { ...option, isCorrect: !option.isCorrect };
+      });
+
+      return {
+        ...question,
+        options: nextOptions,
+      };
+    });
+  };
+
+  const handleAddOption = (questionIndex) => {
+    updateQuestion(questionIndex, (question) => {
+      if (question.options.length >= MAX_OPTIONS) {
+        return question;
+      }
+      return {
+        ...question,
+        options: [...question.options, createEmptyOption()],
+      };
+    });
+  };
+
+  const handleRemoveOption = (questionIndex, optionIndex) => {
+    updateQuestion(questionIndex, (question) => {
+      if (question.options.length <= MIN_OPTIONS) {
+        return question;
+      }
+      return {
+        ...question,
+        options: question.options.filter((_, index) => index !== optionIndex),
+      };
+    });
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitError("");
+
+    const nextTitle = title.trim();
+    const nextDescription = description.trim();
+    const safeDurationMinutes = Number(durationMinutes);
+    const safeQuestionTimeSeconds = Number(questionTimeSeconds);
+    const safeMaxAttempts = Number(maxAttempts);
+
+    if (!nextTitle) {
+      setSubmitError("Введите название квиза.");
+      return;
+    }
+    if (!category) {
+      setSubmitError("Выберите категорию.");
+      return;
+    }
+    if (!Number.isInteger(safeDurationMinutes) || safeDurationMinutes < 1) {
+      setSubmitError("Время прохождения должно быть целым числом от 1 минуты.");
+      return;
+    }
+    if (
+      !Number.isInteger(safeQuestionTimeSeconds) ||
+      safeQuestionTimeSeconds < MIN_QUESTION_TIME_SECONDS
+    ) {
+      setSubmitError(`Время на вопрос должно быть целым числом от ${MIN_QUESTION_TIME_SECONDS} секунд.`);
+      return;
+    }
+    if (safeQuestionTimeSeconds > MAX_QUESTION_TIME_SECONDS) {
+      setSubmitError(`Время на вопрос не должно превышать ${MAX_QUESTION_TIME_SECONDS} секунд.`);
+      return;
+    }
+    if (!Number.isInteger(safeMaxAttempts) || safeMaxAttempts < 1) {
+      setSubmitError("Лимит попыток должен быть целым числом от 1.");
+      return;
+    }
+    if (safeMaxAttempts > MAX_ATTEMPTS_PER_PARTICIPANT) {
+      setSubmitError(`Лимит попыток не должен превышать ${MAX_ATTEMPTS_PER_PARTICIPANT}.`);
+      return;
+    }
+
+    for (let questionIndex = 0; questionIndex < questions.length; questionIndex += 1) {
+      const question = questions[questionIndex];
+      const prompt = question.prompt.trim();
+      const imageUrl = question.imageUrl.trim();
+
+      if (!prompt) {
+        setSubmitError(`Заполните текст вопроса №${questionIndex + 1}.`);
+        return;
+      }
+      if (question.type === "image" && !imageUrl) {
+        setSubmitError(`Загрузите изображение для вопроса №${questionIndex + 1}.`);
+        return;
+      }
+
+      const cleanedOptions = question.options.map((option) => ({
+        text: option.text.trim(),
+        isCorrect: Boolean(option.isCorrect),
+      }));
+      if (cleanedOptions.some((option) => !option.text)) {
+        setSubmitError(`Заполните все варианты ответа в вопросе №${questionIndex + 1}.`);
+        return;
+      }
+
+      const correctCount = cleanedOptions.filter((option) => option.isCorrect).length;
+      if (correctCount === 0) {
+        setSubmitError(`В вопросе №${questionIndex + 1} отметьте правильный ответ.`);
+        return;
+      }
+      if (question.answerMode === "single" && correctCount !== 1) {
+        setSubmitError(`В вопросе №${questionIndex + 1} для одиночного выбора нужен один правильный ответ.`);
+        return;
+      }
+    }
+
+    const payload = {
+      title: nextTitle,
+      description: nextDescription,
+      category,
+      isActive,
+      durationMinutes: safeDurationMinutes,
+      questionTimeSeconds: safeQuestionTimeSeconds,
+      maxAttempts: safeMaxAttempts,
+      rules: {
+        allowBackNavigation,
+        showCorrectAfterAnswer,
+        shuffleQuestions,
+      },
+      questions: questions.map((question) => ({
+        type: question.type,
+        prompt: question.prompt.trim(),
+        imageUrl: question.type === "image" ? question.imageUrl.trim() : "",
+        answerMode: question.answerMode,
+        options: question.options.map((option) => ({
+          text: option.text.trim(),
+          isCorrect: Boolean(option.isCorrect),
+        })),
+      })),
+    };
+
+    try {
+      setIsSubmitting(true);
+      const endpoint = isEditMode
+        ? `${apiBaseUrl}/api/quizzes/${quizId}`
+        : `${apiBaseUrl}/api/quizzes`;
+      await requestWithAuth(endpoint, {
+        method: isEditMode ? "PUT" : "POST",
+        body: JSON.stringify(payload),
+      });
+      navigate("/organizer", { replace: true });
+    } catch (error) {
+      setSubmitError(
+        error.message || (isEditMode ? "Не удалось сохранить квиз." : "Не удалось создать квиз.")
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <main className={cabinetStyles.page}>
+      <header className={cabinetStyles.headerWeb}>
+        <h1 className={cabinetStyles.logo}>
+          <span className={cabinetStyles.wordColor}>Опрос</span>Мастер
+        </h1>
+        <CabinetTopMenu
+          userName={user?.name}
+          userFirstName={user?.firstName}
+          userLastName={user?.lastName}
+          userMiddleName={user?.middleName}
+          userEmail={user?.email}
+          initialAvatar={user?.avatarDataUrl}
+          onLogout={handleLogout}
+        />
+      </header>
+
+      <section className={styles.formCard}>
+        <div className={styles.topActions}>
+          <button type="button" className={styles.backButton} onClick={() => navigate("/organizer")}>
+            К списку квизов
+          </button>
+          <p className={styles.metaText}>
+            Вопросов: {questions.length}, вариантов: {totalOptions}
+          </p>
+        </div>
+
+        <h1 className={styles.title}>
+          {isEditMode ? "Редактирование квиза" : "Создание квиза"}
+        </h1>
+
+        {isPageLoading && <p className={styles.metaText}>Загрузка квиза...</p>}
+        {!isPageLoading && pageError && <p className={styles.errorText}>{pageError}</p>}
+
+        {!isPageLoading && !pageError && (
+          <form className={styles.form} onSubmit={handleSubmit}>
+            <div className={styles.heroHeader}>
+              <div className={styles.heroCopy}>
+                <p className={styles.heroEyebrow}>{isEditMode ? "Quiz editor" : "Quiz builder"}</p>
+                <p className={styles.heroLead}>
+                  Соберите сценарий квиза: задайте тему, темп прохождения, правила показа ответов и подготовьте блок вопросов для live-сессии.
+                </p>
+              </div>
+              <div className={styles.summaryGrid}>
+                <div className={styles.summaryCard}>
+                  <p className={styles.summaryLabel}>Категория</p>
+                  <p className={styles.summaryValue}>{selectedCategoryLabel || "—"}</p>
+                </div>
+                <div className={styles.summaryCard}>
+                  <p className={styles.summaryLabel}>Вопросы</p>
+                  <p className={styles.summaryValue}>{questions.length}</p>
+                </div>
+                <div className={styles.summaryCard}>
+                  <p className={styles.summaryLabel}>Таймер</p>
+                  <p className={styles.summaryValue}>{questionTimeSeconds} c</p>
+                </div>
+                <div className={styles.summaryCard}>
+                  <p className={styles.summaryLabel}>Попытки</p>
+                  <p className={styles.summaryValue}>{maxAttempts}</p>
+                </div>
+              </div>
+            </div>
+
+            <section className={styles.sectionPanel}>
+              <div className={styles.sectionHeader}>
+                <p className={styles.sectionEyebrow}>Base setup</p>
+                <h2 className={styles.sectionTitle}>Основа квиза</h2>
+                <p className={styles.sectionText}>
+                  Название, категория и описание формируют карточку квиза в кабинете и помогают отличать сценарии друг от друга.
+                </p>
+              </div>
+
+              <div className={styles.gridTwo}>
+                <label className={styles.label}>
+                  Название квиза
+                  <input
+                    className={styles.input}
+                    type="text"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    maxLength={120}
+                    placeholder="Например: История России"
+                    required
+                  />
+                </label>
+
+                <label className={styles.label}>
+                  Категория
+                  <select
+                    className={styles.input}
+                    value={category}
+                    onChange={(event) => setCategory(event.target.value)}
+                  >
+                    {categoryOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <label className={styles.label}>
+                Описание
+                <textarea
+                  className={styles.textarea}
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                  placeholder="Кратко опишите, о чем квиз и для кого он"
+                />
+              </label>
+            </section>
+
+            <section className={styles.sectionPanel}>
+              <div className={styles.sectionHeader}>
+                <p className={styles.sectionEyebrow}>Timing and limits</p>
+                <h2 className={styles.sectionTitle}>Темп прохождения</h2>
+                <p className={styles.sectionText}>
+                  Эти параметры определяют длительность квиза, лимит попыток и число карточек вопросов в сценарии.
+                </p>
+              </div>
+
+              <div className={styles.gridTwo}>
+                <label className={styles.label}>
+                  Время на прохождение (мин)
+                  <input
+                    className={styles.input}
+                    type="number"
+                    min={1}
+                    max={MAX_DURATION_MINUTES}
+                    value={durationMinutes}
+                    onChange={(event) => setDurationMinutes(Number(event.target.value))}
+                    required
+                  />
+                </label>
+
+                <label className={styles.label}>
+                  Время на 1 вопрос (сек)
+                  <input
+                    className={styles.input}
+                    type="number"
+                    min={MIN_QUESTION_TIME_SECONDS}
+                    max={MAX_QUESTION_TIME_SECONDS}
+                    value={questionTimeSeconds}
+                    onChange={(event) => setQuestionTimeSeconds(Number(event.target.value))}
+                    required
+                  />
+                </label>
+
+                <label className={styles.label}>
+                  Количество вопросов
+                  <input
+                    className={styles.input}
+                    type="number"
+                    min={MIN_QUESTIONS}
+                    max={MAX_QUESTIONS}
+                    value={questionCount}
+                    onChange={handleQuestionCountChange}
+                    required
+                  />
+                </label>
+
+                <label className={styles.label}>
+                  Лимит попыток на участника
+                  <input
+                    className={styles.input}
+                    type="number"
+                    min={1}
+                    max={MAX_ATTEMPTS_PER_PARTICIPANT}
+                    value={maxAttempts}
+                    onChange={(event) => setMaxAttempts(Number(event.target.value))}
+                    required
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section className={styles.sectionPanel}>
+              <div className={styles.sectionHeader}>
+                <p className={styles.sectionEyebrow}>Rules</p>
+                <h2 className={styles.sectionTitle}>Поведение квиза</h2>
+                <p className={styles.sectionText}>
+                  Управляйте активностью сценария, перемешиванием вопросов и тем, как участники видят свои ответы.
+                </p>
+              </div>
+
+              <div className={styles.rulesRow}>
+                <label className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={isActive}
+                    onChange={(event) => setIsActive(event.target.checked)}
+                  />
+                  <span>Квиз активен сразу</span>
+                </label>
+                <label className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={allowBackNavigation}
+                    onChange={(event) => setAllowBackNavigation(event.target.checked)}
+                  />
+                  <span>Разрешить возврат к прошлым вопросам</span>
+                </label>
+                <label className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={showCorrectAfterAnswer}
+                    onChange={(event) => setShowCorrectAfterAnswer(event.target.checked)}
+                  />
+                  <span>Показывать правильный ответ сразу</span>
+                </label>
+                <label className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={shuffleQuestions}
+                    onChange={(event) => setShuffleQuestions(event.target.checked)}
+                  />
+                  <span>Перемешать вопросы</span>
+                </label>
+              </div>
+            </section>
+
+            <section className={styles.sectionPanel}>
+              <div className={styles.sectionHeader}>
+                <p className={styles.sectionEyebrow}>Question flow</p>
+                <h2 className={styles.sectionTitle}>Сценарий вопросов</h2>
+                <p className={styles.sectionText}>
+                  Для каждого шага можно выбрать тип вопроса, режим ответа, изображение и набор правильных вариантов.
+                </p>
+              </div>
+
+              <div className={styles.questionsWrap}>
+                {questions.map((question, questionIndex) => {
+                  const uploadState = questionUploadStates[questionIndex] || {};
+                  const isUploadingImage = Boolean(uploadState.isUploading);
+                  const uploadError = String(uploadState.error || "");
+                  return (
+                    <article key={questionIndex} className={styles.questionCard}>
+                      <div className={styles.questionHead}>
+                        <h2 className={styles.questionTitle}>Вопрос {questionIndex + 1}</h2>
+                        <div className={styles.inlineControls}>
+                          <select
+                            className={styles.inputCompact}
+                            value={question.type}
+                            onChange={(event) =>
+                              handleQuestionField(questionIndex, "type", event.target.value)
+                            }
+                          >
+                            <option value="text">Текстовый</option>
+                            <option value="image">С изображением</option>
+                          </select>
+
+                          <select
+                            className={styles.inputCompact}
+                            value={question.answerMode}
+                            onChange={(event) =>
+                              handleAnswerModeChange(questionIndex, event.target.value)
+                            }
+                          >
+                            <option value="single">Один верный</option>
+                            <option value="multiple">Несколько верных</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <label className={styles.label}>
+                        Текст вопроса
+                        <input
+                          className={styles.input}
+                          type="text"
+                          value={question.prompt}
+                          onChange={(event) =>
+                            handleQuestionField(questionIndex, "prompt", event.target.value)
+                          }
+                          placeholder="Введите вопрос"
+                          maxLength={300}
+                          required
+                        />
+                      </label>
+
+                      {question.type === "image" && (
+                        <div className={styles.imageUploadCard}>
+                          <div className={styles.imageUploadHead}>
+                            <div>
+                              <p className={styles.imageUploadTitle}>Изображение вопроса</p>
+                              <p className={styles.imageUploadMeta}>Поддерживаются PNG, JPG, WEBP и GIF.</p>
+                            </div>
+                            <label className={styles.uploadButton}>
+                              <input
+                                className={styles.hiddenFileInput}
+                                type="file"
+                                accept={QUESTION_IMAGE_ACCEPT}
+                                onChange={(event) => handleQuestionImageSelected(questionIndex, event)}
+                                disabled={isUploadingImage || isSubmitting}
+                              />
+                              {isUploadingImage
+                                ? "Загрузка..."
+                                : question.imageUrl
+                                  ? "Заменить изображение"
+                                  : "Загрузить изображение"}
+                            </label>
+                          </div>
+
+                          {question.imageUrl ? (
+                            <div className={styles.imagePreviewWrap}>
+                              <img
+                                className={styles.imagePreview}
+                                src={question.imageUrl}
+                                alt={`Иллюстрация для вопроса ${questionIndex + 1}`}
+                              />
+                              <button
+                                type="button"
+                                className={styles.optionDelete}
+                                onClick={() => handleQuestionImageRemove(questionIndex)}
+                              >
+                                Удалить изображение
+                              </button>
+                            </div>
+                          ) : (
+                            <p className={styles.imageUploadMeta}>Файл еще не загружен.</p>
+                          )}
+
+                          {uploadError && <p className={styles.errorText}>{uploadError}</p>}
+                        </div>
+                      )}
+
+                      <div className={styles.optionList}>
+                        {question.options.map((option, optionIndex) => (
+                          <div key={optionIndex} className={styles.optionRow}>
+                            <label className={styles.optionCheck}>
+                              <input
+                                type="checkbox"
+                                checked={option.isCorrect}
+                                onChange={() => handleOptionCorrectToggle(questionIndex, optionIndex)}
+                              />
+                              <span>Верный</span>
+                            </label>
+                            <input
+                              className={styles.input}
+                              type="text"
+                              value={option.text}
+                              onChange={(event) =>
+                                handleOptionTextChange(questionIndex, optionIndex, event.target.value)
+                              }
+                              placeholder={`Вариант ${optionIndex + 1}`}
+                              maxLength={180}
+                              required
+                            />
+                            <button
+                              type="button"
+                              className={styles.optionDelete}
+                              onClick={() => handleRemoveOption(questionIndex, optionIndex)}
+                              disabled={question.options.length <= MIN_OPTIONS}
+                              aria-label="Удалить вариант"
+                            >
+                              Удалить
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        className={styles.optionAdd}
+                        onClick={() => handleAddOption(questionIndex)}
+                        disabled={question.options.length >= MAX_OPTIONS}
+                      >
+                        + Добавить вариант
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+
+            {submitError && <p className={styles.errorText}>{submitError}</p>}
+
+            <div className={styles.submitRow}>
+              <button type="button" className={styles.secondaryButton} onClick={() => navigate("/organizer")}>
+                Отмена
+              </button>
+              <button type="submit" className={styles.primaryButton} disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Сохраняем..."
+                  : isEditMode
+                    ? "Сохранить изменения"
+                    : "Создать квиз"}
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
+    </main>
+  );
+}

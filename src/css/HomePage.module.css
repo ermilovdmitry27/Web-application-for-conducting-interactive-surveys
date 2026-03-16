@@ -1,0 +1,343 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 22px clamp(18px, 4vw, 36px) 36px;
+}
+
+.headerWeb {
+  width: min(1340px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 20px;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background: var(--shell-bg);
+  box-shadow: var(--shadow-md), 0 0 0 1px rgba(91, 140, 255, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.brandBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.brandTag,
+.heroEyebrow,
+.panelEyebrow,
+.roleCardEyebrow {
+  margin: 0;
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.logo {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-heading);
+  font-size: clamp(30px, 3.8vw, 44px);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  font-weight: 700;
+}
+
+.wordColor {
+  color: var(--primary);
+}
+
+.authButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.authButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: var(--shell-bg-strong);
+  border: 1px solid var(--line-strong);
+}
+
+.authButton:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.secondaryAction {
+  background: var(--secondary-bg);
+}
+
+.registerButton,
+.createQuizButton {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
+  border-color: transparent;
+  box-shadow: 0 14px 28px rgba(36, 87, 255, 0.16);
+}
+
+.addButton {
+  color: var(--text);
+  background: var(--shell-bg-soft);
+  border-color: rgba(91, 140, 255, 0.28);
+}
+
+.centerWrap {
+  flex: 1;
+  width: min(1340px, 100%);
+  display: flex;
+  align-items: stretch;
+}
+
+.bodyWebSite {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.centerElement {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(340px, 0.82fr);
+  gap: 18px;
+}
+
+.heroCopy,
+.heroPanel,
+.roleCard {
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.heroCopy {
+  position: relative;
+  overflow: hidden;
+  min-height: 620px;
+  padding: clamp(28px, 4vw, 46px);
+  border-radius: 24px;
+  background: var(--hero-gradient-main);
+  color: var(--hero-text);
+  box-shadow: var(--hero-shadow);
+}
+
+.heroCopy::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 18%, var(--hero-radial-a), transparent 28%),
+    radial-gradient(circle at 84% 16%, var(--hero-radial-b), transparent 20%),
+    linear-gradient(90deg, transparent 0, transparent 96px, var(--hero-grid-line) 96px, var(--hero-grid-line) 97px);
+}
+
+.heroCopy > * {
+  position: relative;
+}
+
+.heroEyebrow {
+  color: var(--hero-label);
+}
+
+.centerTitle {
+  margin: 0;
+  max-width: 10ch;
+  color: var(--hero-text);
+  font-family: var(--font-heading);
+  font-size: clamp(56px, 6.8vw, 100px);
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  font-weight: 700;
+  text-shadow: var(--hero-title-shadow);
+}
+
+.heroLead {
+  margin: 22px 0 0;
+  max-width: 40ch;
+  color: var(--hero-muted);
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.centerButtons {
+  margin-top: 30px;
+}
+
+.centerButtons .authButton {
+  min-width: 220px;
+}
+
+.heroPanel {
+  padding: 28px;
+  border-radius: 22px;
+  background: var(--contrast-panel-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--contrast-panel-text);
+  box-shadow: var(--contrast-panel-shadow);
+}
+
+.heroPanelHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panelTitle {
+  margin: 0;
+  color: var(--contrast-panel-text);
+  font-family: var(--font-heading);
+  font-size: clamp(24px, 2.3vw, 30px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+}
+
+.stepList {
+  margin-top: 4px;
+  display: grid;
+  gap: 12px;
+}
+
+.stepCard {
+  padding: 18px;
+  border: 1px solid var(--hero-card-border);
+  border-radius: 16px;
+  background: var(--hero-card-bg);
+}
+
+.stepLabel {
+  margin: 0;
+  color: var(--hero-label);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.stepTitle {
+  margin: 12px 0 0;
+  color: var(--contrast-panel-text);
+  font-family: var(--font-heading);
+  font-size: 22px;
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+}
+
+.stepText {
+  margin: 10px 0 0;
+  color: var(--contrast-panel-muted);
+  font-size: 15px;
+  line-height: 1.66;
+}
+
+.roleGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.roleCard {
+  padding: 20px;
+  border-radius: 18px;
+  background: var(--shell-bg);
+  box-shadow: var(--shadow-md), 0 0 0 1px rgba(91, 140, 255, 0.08);
+}
+
+.roleCardTitle {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-heading);
+  font-size: clamp(20px, 2vw, 28px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+}
+
+.roleCardText {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.68;
+}
+
+@media (max-width: 1024px) {
+  .centerElement,
+  .roleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .heroCopy {
+    min-height: auto;
+  }
+
+  .centerTitle,
+  .heroLead {
+    max-width: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .headerWeb {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding-inline: 14px;
+  }
+
+  .headerWeb,
+  .heroCopy,
+  .heroPanel,
+  .roleCard {
+    padding: 16px;
+  }
+
+  .heroPanel {
+    gap: 16px;
+  }
+
+  .centerButtons,
+  .authButtons {
+    width: 100%;
+  }
+
+  .authButton,
+  .centerButtons .authButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .centerTitle {
+    font-size: clamp(42px, 12vw, 66px);
+  }
+
+  .heroLead {
+    font-size: 16px;
+  }
+}

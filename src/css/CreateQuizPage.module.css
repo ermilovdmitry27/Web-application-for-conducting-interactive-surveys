@@ -1,0 +1,460 @@
+.formCard {
+  width: min(1180px, 100%);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--shell-bg);
+  box-shadow: var(--shadow-md), 0 0 0 1px rgba(91, 140, 255, 0.06);
+  backdrop-filter: blur(18px);
+  padding: 24px;
+}
+
+.topActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.backButton,
+.optionDelete,
+.optionAdd,
+.uploadButton,
+.primaryButton,
+.secondaryButton {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.backButton,
+.secondaryButton,
+.optionDelete,
+.optionAdd,
+.uploadButton {
+  color: var(--text);
+  background: var(--shell-bg-soft);
+  border: 1px solid var(--line-strong);
+}
+
+.primaryButton {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
+  box-shadow: 0 16px 28px rgba(37, 99, 235, 0.16);
+}
+
+.primaryButton:hover,
+.secondaryButton:hover,
+.backButton:hover,
+.optionDelete:hover,
+.optionAdd:hover,
+.uploadButton:hover {
+  transform: translateY(-1px);
+}
+
+.primaryButton:disabled,
+.optionDelete:disabled,
+.optionAdd:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.metaText,
+.imageUploadMeta,
+.errorText {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.metaText,
+.imageUploadMeta {
+  color: var(--muted);
+}
+
+.title {
+  margin: 18px 0 0;
+  color: var(--text);
+  font-family: var(--font-heading);
+  font-size: clamp(32px, 3.8vw, 48px);
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+  font-weight: 700;
+}
+
+.heroHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1.06fr) minmax(300px, 0.94fr);
+  gap: 20px;
+  padding: 22px;
+  border: 1px solid rgba(98, 141, 255, 0.24);
+  border-radius: 20px;
+  background: var(--hero-gradient-accent);
+  box-shadow: var(--hero-shadow);
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.heroEyebrow,
+.sectionEyebrow,
+.summaryLabel {
+  margin: 0;
+  color: var(--primary);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.heroEyebrow {
+  color: var(--hero-label);
+}
+
+.heroLead,
+.sectionText {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.72;
+}
+
+.heroHeader .title {
+  color: var(--hero-text);
+  text-shadow: var(--hero-title-shadow);
+}
+
+.heroHeader .heroLead {
+  color: var(--hero-muted);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summaryCard,
+.sectionPanel {
+  border: 1px solid var(--line);
+  background: var(--shell-bg-soft);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.heroHeader .summaryCard {
+  border-color: var(--hero-card-border);
+  background: var(--hero-card-bg);
+  box-shadow: none;
+}
+
+.heroHeader .summaryLabel {
+  color: var(--hero-card-muted);
+}
+
+.heroHeader .summaryValue {
+  color: var(--hero-text);
+}
+
+.summaryCard {
+  padding: 18px;
+  border-radius: 16px;
+}
+
+.summaryValue {
+  margin: 12px 0 0;
+  color: var(--text);
+  font-family: var(--font-heading);
+  font-size: clamp(24px, 2.4vw, 34px);
+  font-weight: 800;
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+}
+
+.form {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sectionPanel {
+  padding: 20px;
+  border-radius: 18px;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-heading);
+  font-size: clamp(24px, 2.6vw, 34px);
+  font-weight: 800;
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+}
+
+.gridTwo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.input,
+.textarea,
+.inputCompact {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--secondary-bg);
+  color: var(--text);
+  box-shadow: var(--input-highlight);
+}
+
+.textarea {
+  min-height: 120px;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  resize: vertical;
+}
+
+.inputCompact {
+  min-width: 170px;
+}
+
+.input:focus,
+.textarea:focus,
+.inputCompact:focus {
+  border-color: rgba(39, 84, 215, 0.3);
+  box-shadow: 0 0 0 4px rgba(39, 84, 215, 0.08);
+}
+
+.rulesRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line-strong);
+  background: var(--secondary-bg);
+  color: var(--text);
+}
+
+.checkboxLabel input,
+.optionCheck input {
+  accent-color: var(--primary);
+}
+
+.questionsWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.questionCard {
+  padding: 20px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--shell-bg-soft);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.questionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.questionTitle {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-heading);
+  font-size: clamp(22px, 2.4vw, 30px);
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+  font-weight: 700;
+}
+
+.inlineControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.imageUploadCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--secondary-bg);
+}
+
+.imageUploadHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.imageUploadTitle {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-heading);
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.uploadButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.hiddenFileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.imagePreviewWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.imagePreview {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.optionList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.optionRow {
+  display: grid;
+  grid-template-columns: 130px 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.optionCheck {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.optionAdd {
+  align-self: flex-start;
+}
+
+.errorText {
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.submitRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .heroHeader,
+  .gridTwo {
+    grid-template-columns: 1fr;
+  }
+
+  .questionHead,
+  .imageUploadHead,
+  .submitRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .optionRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .formCard {
+    padding: 18px;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sectionPanel {
+    padding: 18px;
+  }
+
+  .backButton,
+  .primaryButton,
+  .secondaryButton,
+  .optionDelete,
+  .optionAdd,
+  .uploadButton {
+    width: 100%;
+    justify-content: center;
+  }
+}
