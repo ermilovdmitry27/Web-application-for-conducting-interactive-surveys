@@ -4,6 +4,7 @@ import styles from "../css/CabinetPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
 import { buildWebSocketUrl, parseWebSocketMessage } from "../lib/websocket";
 import LiveHeroSection from "./organizer-live/LiveHeroSection";
+import LiveLobbyPanel from "./organizer-live/LiveLobbyPanel";
 import { formatSeconds, getLiveStatusLabel, getStoredUser } from "./organizer-live/utils";
 
 export default function OrganizerLivePage() {
@@ -537,29 +538,7 @@ export default function OrganizerLivePage() {
             <section className={styles.liveWorkspaceGrid}>
               <section className={styles.liveStageCard}>
                 {session.status === "running" && !session.isLiveStarted && (
-                  <div className={styles.liveStatePanel}>
-                    <p className={styles.liveStateEyebrow}>Lobby</p>
-                    <h2 className={styles.liveStageTitle}>Комната открыта для участников.</h2>
-                    <p className={styles.liveStateText}>
-                      Игроки уже могут подключаться по коду комнаты. Когда все готовы, запускайте квиз из панели управления.
-                    </p>
-
-                    {Array.isArray(session.participants) && session.participants.length > 0 ? (
-                      <ul className={styles.liveWinnerList}>
-                        {session.participants.map((participant) => (
-                          <li
-                            key={`${participant.participantId}-${participant.joinedAt}`}
-                            className={styles.liveWinnerItem}
-                          >
-                            <span>{participant.participantName}</span>
-                            <span>{new Date(participant.joinedAt).toLocaleTimeString("ru-RU")}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className={styles.text}>Пока никто не подключился.</p>
-                    )}
-                  </div>
+                  <LiveLobbyPanel participants={session.participants} />
                 )}
 
                 {session.status === "running" && session.isLiveStarted && session.currentQuestion && (
