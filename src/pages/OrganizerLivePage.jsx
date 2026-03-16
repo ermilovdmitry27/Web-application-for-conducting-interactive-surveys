@@ -5,10 +5,11 @@ import CabinetTopMenu from "../components/CabinetTopMenu";
 import { getApiBaseUrl } from "../lib/api/config";
 import { requestWithAuth } from "../lib/api/requestWithAuth";
 import { buildWebSocketUrl, parseWebSocketMessage } from "../lib/websocket";
+import ActiveQuestionPanel from "./organizer-live/ActiveQuestionPanel";
 import FinishedLeaderboardPanel from "./organizer-live/FinishedLeaderboardPanel";
 import LiveHeroSection from "./organizer-live/LiveHeroSection";
 import LiveLobbyPanel from "./organizer-live/LiveLobbyPanel";
-import { formatSeconds, getLiveStatusLabel, getStoredUser } from "./organizer-live/utils";
+import { getLiveStatusLabel, getStoredUser } from "./organizer-live/utils";
 
 export default function OrganizerLivePage() {
   const navigate = useNavigate();
@@ -518,68 +519,15 @@ export default function OrganizerLivePage() {
                 )}
 
                 {session.status === "running" && session.isLiveStarted && session.currentQuestion && (
-                  <div className={styles.liveQuestionForm}>
-                    <div className={styles.liveQuestionHeader}>
-                      <div className={styles.liveQuestionMeta}>
-                        <p className={styles.liveStateEyebrow}>Question {session.currentQuestion.index + 1}</p>
-                        <h2 className={styles.liveStageTitle}>{session.currentQuestion.prompt}</h2>
-                      </div>
-                      <div className={styles.liveTimerWrap}>
-                        <span
-                          className={`${styles.quizTimer} ${
-                            questionRemainingSeconds <= 5 ? styles.quizTimerWarning : ""
-                          }`}
-                        >
-                          {session.isPaused
-                            ? `Пауза: ${formatSeconds(questionRemainingSeconds)}`
-                            : `До следующего вопроса: ${formatSeconds(questionRemainingSeconds)}`}
-                        </span>
-                        <p className={styles.liveHelperText}>
-                          {session.isPaused
-                            ? "Таймер остановлен. Участники временно не могут отвечать."
-                            : `Автопереход каждые ${formatSeconds(session.questionTimeLimitSeconds)}.`}
-                        </p>
-                      </div>
-                    </div>
-
-                    {session.currentQuestion.type === "image" && session.currentQuestion.imageUrl && (
-                      <img
-                        className={styles.participantQuestionImage}
-                        src={session.currentQuestion.imageUrl}
-                        alt={`Иллюстрация к вопросу ${session.currentQuestion.index + 1}`}
-                      />
-                    )}
-
-                    <div className={styles.participantOptionList}>
-                      {session.currentQuestion.options.map((option) => (
-                        <p key={option.id} className={styles.liveOptionRow}>
-                          <span>{option.text}</span>
-                          {option.isCorrect && <strong className={styles.liveCorrectMarker}>верный</strong>}
-                        </p>
-                      ))}
-                    </div>
-
-                    <div className={styles.liveResultCallout}>
-                      Ответов на текущий вопрос: {session.currentQuestionAnswersCount}/{session.participantsCount}
-                    </div>
-
-                    {Array.isArray(session.currentQuestionAnsweredParticipants) &&
-                    session.currentQuestionAnsweredParticipants.length > 0 ? (
-                      <ul className={styles.liveWinnerList}>
-                        {session.currentQuestionAnsweredParticipants.map((participant) => (
-                          <li
-                            key={`${participant.participantId}-${participant.submittedAt}`}
-                            className={styles.liveWinnerItem}
-                          >
-                            <span>{participant.participantName}</span>
-                            <span>{formatSeconds(participant.submittedAfterSeconds)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className={styles.text}>Пока никто не ответил на текущий вопрос.</p>
-                    )}
-                  </div>
+                  <ActiveQuestionPanel
+                    currentQuestion={session.currentQuestion}
+                    isPaused={session.isPaused}
+                    questionRemainingSeconds={questionRemainingSeconds}
+                    questionTimeLimitSeconds={session.questionTimeLimitSeconds}
+                    currentQuestionAnswersCount={session.currentQuestionAnswersCount}
+                    participantsCount={session.participantsCount}
+                    answeredParticipants={session.currentQuestionAnsweredParticipants}
+                  />
                 )}
 
                 {session.status === "finished" && (
