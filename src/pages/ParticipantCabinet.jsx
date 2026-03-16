@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
+import { getApiBaseUrl } from "../lib/api/config";
+import { requestWithAuth as sharedRequestWithAuth } from "../lib/api/requestWithAuth";
 
 const AUTH_USER_UPDATED_EVENT = "auth-user-updated";
 
@@ -154,7 +156,7 @@ export default function ParticipantCabinet() {
   const navigate = useNavigate();
   const [user, setUser] = useState(() => getStoredUser());
   const firstName = String(user?.firstName || user?.name || "Участник").trim().split(/\s+/)[0] || "Участник";
-  const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:4000";
+  const apiBaseUrl = getApiBaseUrl();
 
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
@@ -177,33 +179,14 @@ export default function ParticipantCabinet() {
   }, []);
 
   const requestWithAuth = useCallback(async (url, options = {}) => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) {
-      throw new Error("Сессия истекла. Войдите заново.");
-    }
-
-    let response;
     try {
-      response = await fetch(url, {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          ...(options.headers || {}),
-        },
-      });
-    } catch (_error) {
-      throw new Error("Нет связи с API. Запустите сервер: npm run server");
-    }
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error(data.message || "Ресурс не найден.");
+      return await sharedRequestWithAuth(url, options);
+    } catch (error) {
+      if (error?.message === "Ошибка запроса (404).") {
+        throw new Error("Ресурс не найден.");
       }
-      throw new Error(data.message || `Ошибка запроса (${response.status}).`);
+      throw error;
     }
-    return data;
   }, []);
 
   const loadAttempts = useCallback(async () => {
