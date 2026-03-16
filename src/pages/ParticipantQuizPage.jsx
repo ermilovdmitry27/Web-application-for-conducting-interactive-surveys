@@ -10,6 +10,7 @@ import FinishedLeaderboardPanel from "./participant-quiz/FinishedLeaderboardPane
 import LiveHeroSection from "./participant-quiz/LiveHeroSection";
 import LiveLobbyPanel from "./participant-quiz/LiveLobbyPanel";
 import LiveQueuePanel from "./participant-quiz/LiveQueuePanel";
+import LiveSidebar from "./participant-quiz/LiveSidebar";
 import { formatSeconds, getLiveStatusLabel, getStoredUser } from "./participant-quiz/utils";
 
 export default function ParticipantQuizPage() {
@@ -541,50 +542,16 @@ export default function ParticipantQuizPage() {
                 )}
               </section>
 
-              <aside className={styles.liveSidebar}>
-                <article className={styles.liveSidebarCard}>
-                  <p className={styles.liveSidebarLabel}>Session brief</p>
-                  <p className={styles.liveSidebarText}>
-                    Статус: {getLiveStatusLabel(session.status, session.isPaused)} • WS: {wsStatus}
-                  </p>
-                  {attemptsInfo && (
-                    <p className={styles.liveSidebarText}>
-                      Попыток: {attemptsInfo.used}/{attemptsInfo.limit}. Осталось: {attemptsInfo.remaining}
-                    </p>
-                  )}
-                </article>
-
-                <article className={styles.liveSidebarCard}>
-                  <p className={styles.liveSidebarLabel}>Что дальше</p>
-                  <p className={styles.liveSidebarText}>
-                    {session.status === "finished"
-                      ? "Рейтинг уже сохранен. Можно вернуться в кабинет и открыть историю прохождений."
-                      : isRunning && isLiveStarted
-                        ? "Держите окно открытым: следующий вопрос придет автоматически через общий эфир."
-                        : "Организатор пока собирает участников в лобби перед стартом квиза."}
-                  </p>
-                </article>
-
-                {myLeaderboardPlace && session.status === "finished" && (
-                  <article className={styles.liveSidebarCard}>
-                    <p className={styles.liveSidebarLabel}>Ваше место</p>
-                    <p className={styles.liveSidebarValue}>#{myLeaderboardPlace.place}</p>
-                    <p className={styles.liveSidebarText}>
-                      {myLeaderboardPlace.score}/{myLeaderboardPlace.maxScore} баллов • {myLeaderboardPlace.percentage}%
-                    </p>
-                  </article>
-                )}
-
-                {session.status === "finished" && (
-                  <button
-                    type="button"
-                    className={styles.formSubmitButton}
-                    onClick={() => refreshLeaderboard(session.sessionId)}
-                  >
-                    Обновить рейтинг
-                  </button>
-                )}
-              </aside>
+              <LiveSidebar
+                sessionStatus={session.status}
+                isPaused={session.isPaused}
+                wsStatus={wsStatus}
+                attemptsInfo={attemptsInfo}
+                isRunning={isRunning}
+                isLiveStarted={isLiveStarted}
+                myLeaderboardPlace={myLeaderboardPlace}
+                onRefreshLeaderboard={() => refreshLeaderboard(session.sessionId)}
+              />
             </section>
           </>
         )}
