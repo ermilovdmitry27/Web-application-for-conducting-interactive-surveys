@@ -4,6 +4,7 @@ import styles from "../css/CabinetPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
 import { getApiBaseUrl } from "../lib/api/config";
 import { requestWithAuth as sharedRequestWithAuth } from "../lib/api/requestWithAuth";
+import FeatureDeckSection from "./participant-cabinet/FeatureDeckSection";
 import {
   AUTH_USER_UPDATED_EVENT,
   PARTICIPANT_SIGNALS,
@@ -326,14 +327,7 @@ export default function ParticipantCabinet() {
           </aside>
         </section>
 
-        <section className={styles.featureDeck}>
-          {PARTICIPANT_SIGNALS.map((item) => (
-            <article key={item.title} className={styles.featureDeckCard}>
-              <h2 className={styles.featureDeckTitle}>{item.title}</h2>
-              <p className={styles.featureDeckText}>{item.text}</p>
-            </article>
-          ))}
-        </section>
+        <FeatureDeckSection signals={PARTICIPANT_SIGNALS} />
 
         <section className={styles.archiveSection}>
           <div className={styles.archiveHeader}>
