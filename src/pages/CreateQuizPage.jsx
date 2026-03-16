@@ -4,6 +4,7 @@ import cabinetStyles from "../css/CabinetPage.module.css";
 import styles from "../css/CreateQuizPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
 import QuestionCard from "./create-quiz/QuestionCard";
+import QuizRulesSection from "./create-quiz/QuizRulesSection";
 import {
   CATEGORY_OPTIONS,
   DEFAULT_DURATION_MINUTES,
@@ -650,50 +651,16 @@ export default function CreateQuizPage() {
               </div>
             </section>
 
-            <section className={styles.sectionPanel}>
-              <div className={styles.sectionHeader}>
-                <p className={styles.sectionEyebrow}>Rules</p>
-                <h2 className={styles.sectionTitle}>Поведение квиза</h2>
-                <p className={styles.sectionText}>
-                  Управляйте активностью сценария, перемешиванием вопросов и тем, как участники видят свои ответы.
-                </p>
-              </div>
-
-              <div className={styles.rulesRow}>
-                <label className={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    checked={isActive}
-                    onChange={(event) => setIsActive(event.target.checked)}
-                  />
-                  <span>Квиз активен сразу</span>
-                </label>
-                <label className={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    checked={allowBackNavigation}
-                    onChange={(event) => setAllowBackNavigation(event.target.checked)}
-                  />
-                  <span>Разрешить возврат к прошлым вопросам</span>
-                </label>
-                <label className={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    checked={showCorrectAfterAnswer}
-                    onChange={(event) => setShowCorrectAfterAnswer(event.target.checked)}
-                  />
-                  <span>Показывать правильный ответ сразу</span>
-                </label>
-                <label className={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    checked={shuffleQuestions}
-                    onChange={(event) => setShuffleQuestions(event.target.checked)}
-                  />
-                  <span>Перемешать вопросы</span>
-                </label>
-              </div>
-            </section>
+            <QuizRulesSection
+              isActive={isActive}
+              allowBackNavigation={allowBackNavigation}
+              showCorrectAfterAnswer={showCorrectAfterAnswer}
+              shuffleQuestions={shuffleQuestions}
+              onIsActiveChange={(event) => setIsActive(event.target.checked)}
+              onAllowBackNavigationChange={(event) => setAllowBackNavigation(event.target.checked)}
+              onShowCorrectAfterAnswerChange={(event) => setShowCorrectAfterAnswer(event.target.checked)}
+              onShuffleQuestionsChange={(event) => setShuffleQuestions(event.target.checked)}
+            />
 
             <section className={styles.sectionPanel}>
               <div className={styles.sectionHeader}>
