@@ -2,83 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
-
-const AUTH_USER_UPDATED_EVENT = "auth-user-updated";
-
-function getStoredUser() {
-  try {
-    const raw = localStorage.getItem("auth_user");
-    return raw ? JSON.parse(raw) : null;
-  } catch (_error) {
-    return null;
-  }
-}
-
-function formatAttemptDate(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-  return date.toLocaleString("ru-RU");
-}
-
-function formatSessionPeriod(startedAt, finishedAt) {
-  const started = formatAttemptDate(startedAt);
-  const finished = formatAttemptDate(finishedAt);
-  if (!started && !finished) {
-    return "";
-  }
-  if (!finished) {
-    return `Старт: ${started}`;
-  }
-  return `Старт: ${started} • Финиш: ${finished}`;
-}
-
-function getResultBadgeClass(percentage) {
-  if (percentage >= 80) {
-    return styles.resultBadgeHigh;
-  }
-  if (percentage >= 50) {
-    return styles.resultBadgeMedium;
-  }
-  return styles.resultBadgeLow;
-}
-
-function formatDurationSeconds(value) {
-  const totalSeconds = Math.max(0, Number(value) || 0);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}м ${String(seconds).padStart(2, "0")}с`;
-}
-
-const ORGANIZER_SIGNALS = [
-  {
-    label: "Library",
-    title: "Сценарии квизов",
-    text: "Управляйте банком квизов, параметрами комнаты и логикой каждого сценария.",
-  },
-  {
-    label: "Live",
-    title: "Эфирный контроль",
-    text: "Запускайте комнаты, ставьте эфир на паузу и ведите участников по вопросам в реальном времени.",
-  },
-  {
-    label: "Analytics",
-    title: "Результаты и метрики",
-    text: "Следите за средним процентом, участниками, попытками и активностью по каждому квизу.",
-  },
-];
-
-const ORGANIZER_NOTES = [
-  {
-    label: "Create",
-    text: "Новый квиз создается из кабинета и сразу получает комнату с кодом подключения.",
-  },
-  {
-    label: "Monitor",
-    text: "Live-сессии, попытки участников и итоговые рейтинги доступны в одной панели.",
-  },
-];
+import {
+  AUTH_USER_UPDATED_EVENT,
+  ORGANIZER_NOTES,
+  ORGANIZER_SIGNALS,
+} from "./organizer-cabinet/constants";
+import {
+  formatAttemptDate,
+  formatDurationSeconds,
+  formatSessionPeriod,
+  getResultBadgeClass,
+  getStoredUser,
+} from "./organizer-cabinet/utils";
 
 export default function OrganizerCabinet() {
   const navigate = useNavigate();
