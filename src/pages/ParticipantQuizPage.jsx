@@ -4,6 +4,7 @@ import styles from "../css/CabinetPage.module.css";
 import CabinetTopMenu from "../components/CabinetTopMenu";
 import { buildWebSocketUrl, parseWebSocketMessage } from "../lib/websocket";
 import LiveHeroSection from "./participant-quiz/LiveHeroSection";
+import LiveQueuePanel from "./participant-quiz/LiveQueuePanel";
 import { formatSeconds, getLiveStatusLabel, getStoredUser } from "./participant-quiz/utils";
 
 export default function ParticipantQuizPage() {
@@ -540,13 +541,7 @@ export default function ParticipantQuizPage() {
                 )}
 
                 {isRunning && isLiveStarted && !currentQuestion && (
-                  <div className={styles.liveStatePanel}>
-                    <p className={styles.liveStateEyebrow}>Queue</p>
-                    <h2 className={styles.liveStageTitle}>Ожидайте следующий вопрос.</h2>
-                    <p className={styles.liveStateText}>
-                      Новый вопрос появится автоматически, как только организатор переключит эфир.
-                    </p>
-                  </div>
+                  <LiveQueuePanel />
                 )}
 
                 {isRunning && isLiveStarted && currentQuestion && (
