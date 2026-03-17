@@ -209,6 +209,37 @@ Seed создаёт:
 - live session заранее не создаётся
 - для ручной проверки live flow её нужно запускать из UI organizer на seeded live-ready quiz
 
+## Reset local DB
+
+Для полного локального сброса состояния проекта:
+
+```bash
+npm run reset:db
+```
+
+Эта команда:
+
+- удаляет только проектные таблицы `quiz-app`
+- заново создаёт схему через текущий `server/db-init.js`
+
+Чтобы после reset сразу получить предсказуемые dev-данные:
+
+```bash
+npm run seed:reset
+```
+
+Если нужен только seed поверх уже существующей схемы:
+
+```bash
+npm run seed:dev
+```
+
+Важно:
+
+- `reset:db` и `seed:reset` это destructive dev-команды для текущей БД из `.env`
+- удаляются данные только project tables: `users`, `quizzes`, `quiz_attempts`, `quiz_sessions`, `quiz_session_participants`, `quiz_session_answers`
+- рабочее локальное состояние восстанавливается командой `npm run seed:dev` или `npm run seed:reset`
+
 ## URL по умолчанию
 
 - frontend: `http://localhost:3000`
