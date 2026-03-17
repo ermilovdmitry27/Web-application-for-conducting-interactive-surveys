@@ -240,6 +240,20 @@ npm run seed:dev
 - удаляются данные только project tables: `users`, `quizzes`, `quiz_attempts`, `quiz_sessions`, `quiz_session_participants`, `quiz_session_answers`
 - рабочее локальное состояние восстанавливается командой `npm run seed:dev` или `npm run seed:reset`
 
+## Security baseline
+
+Backend уже включает минимальный baseline security hardening:
+
+- отключён `X-Powered-By`
+- добавлены базовые security headers
+- включён lightweight rate limiting для auth routes
+- включён lightweight rate limiting для question image upload
+
+Для локальной разработки это обычно незаметно, но при слишком частых запросах:
+
+- к auth endpoints возможен `429`
+- к question image upload route возможен `429`
+
 ## URL по умолчанию
 
 - frontend: `http://localhost:3000`
