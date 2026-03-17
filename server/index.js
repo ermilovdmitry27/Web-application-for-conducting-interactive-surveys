@@ -100,6 +100,79 @@ const server = http.createServer(app);
 const uploadsRootDir = path.join(__dirname, "uploads");
 const questionUploadsDir = path.join(uploadsRootDir, "questions");
 
+app.disable("x-powered-by");
+
+function applySecurityHeaders(_req, res, next) {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("X-DNS-Prefetch-Control", "off");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+}
+
+function getRequestIp(req) {
+  const forwardedFor = req.headers["x-forwarded-for"];
+  if (typeof forwardedFor === "string" && forwardedFor.trim()) {
+    return forwardedFor.split(",")[0].trim();
+  }
+  return req.ip || req.socket?.remoteAddress || "unknown";
+}
+
+function createRateLimitMiddleware({ windowMs, maxRequests, message }) {
+  const requestsByIp = new Map();
+
+  return (req, res, next) => {
+    const now = Date.now();
+    const ip = getRequestIp(req);
+    const currentEntry = requestsByIp.get(ip);
+
+    if (!currentEntry || now - currentEntry.windowStartedAt >= windowMs) {
+      requestsByIp.set(ip, {
+        count: 1,
+        windowStartedAt: now,
+      });
+      next();
+      return;
+    }
+
+    if (currentEntry.count >= maxRequests) {
+      const retryAfterSeconds = Math.max(
+        1,
+        Math.ceil((windowMs - (now - currentEntry.windowStartedAt)) / 1000)
+      );
+      res.setHeader("Retry-After", String(retryAfterSeconds));
+      res.status(429).json({ message });
+      return;
+    }
+
+    currentEntry.count += 1;
+
+    if (requestsByIp.size > 500) {
+      requestsByIp.forEach((entry, entryIp) => {
+        if (now - entry.windowStartedAt >= windowMs) {
+          requestsByIp.delete(entryIp);
+        }
+      });
+    }
+
+    next();
+  };
+}
+
+const authRateLimit = createRateLimitMiddleware({
+  windowMs: 60_000,
+  maxRequests: 20,
+  message: "Слишком много попыток авторизации. Повторите позже.",
+});
+
+const uploadRateLimit = createRateLimitMiddleware({
+  windowMs: 60_000,
+  maxRequests: 30,
+  message: "Слишком много попыток загрузки. Повторите позже.",
+});
+
+app.use(applySecurityHeaders);
 app.use(
   cors({
     origin: allowedOrigins,
@@ -450,7 +523,7 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, ready: isServerReady });
 });
 
-app.post("/api/auth/register", async (req, res) => {
+app.post("/api/auth/register", authRateLimit, async (req, res) => {
   try {
     const rawName = req.body?.name;
     const rawFirstName = req.body?.firstName;
@@ -518,7 +591,7 @@ app.post("/api/auth/register", async (req, res) => {
   }
 });
 
-app.post("/api/auth/login", async (req, res) => {
+app.post("/api/auth/login", authRateLimit, async (req, res) => {
   try {
     const rawEmail = req.body?.email;
     const rawPassword = req.body?.password;
@@ -676,7 +749,12 @@ app.put("/api/users/me/avatar", authenticate, async (req, res) => {
   }
 });
 
-app.post("/api/uploads/question-image", authenticate, requireRole("organizer"), (req, res) => {
+app.post(
+  "/api/uploads/question-image",
+  authenticate,
+  requireRole("organizer"),
+  uploadRateLimit,
+  (req, res) => {
   questionImageUpload.single("image")(req, res, (error) => {
     if (error instanceof multer.MulterError) {
       if (error.code === "LIMIT_FILE_SIZE") {
@@ -705,7 +783,8 @@ app.post("/api/uploads/question-image", authenticate, requireRole("organizer"), 
       originalName: req.file.originalname,
     });
   });
-});
+}
+);
 
 app.get("/api/quizzes/mine", authenticate, requireRole("organizer"), async (req, res) => {
   try {
