@@ -15,7 +15,36 @@ const rawWsHeartbeatMs = Number(process.env.WS_HEARTBEAT_MS || 30_000);
 const wsHeartbeatMs = Number.isFinite(rawWsHeartbeatMs) && rawWsHeartbeatMs > 0 ? rawWsHeartbeatMs : 30_000;
 const rawLiveAutoTickMs = Number(process.env.LIVE_AUTO_TICK_MS || 1000);
 const liveAutoTickMs = Number.isFinite(rawLiveAutoTickMs) && rawLiveAutoTickMs > 0 ? rawLiveAutoTickMs : 1000;
-const allowedOrigins = corsOrigin.split(",").map((origin) => origin.trim()).filter(Boolean);
+
+function expandLoopbackOrigin(origin) {
+  const normalizedOrigin = String(origin || "").trim();
+  if (!normalizedOrigin) {
+    return [];
+  }
+  if (normalizedOrigin === "*") {
+    return [normalizedOrigin];
+  }
+
+  try {
+    const parsed = new URL(normalizedOrigin);
+    if (parsed.hostname === "localhost") {
+      parsed.hostname = "127.0.0.1";
+      return [normalizedOrigin, parsed.origin];
+    }
+    if (parsed.hostname === "127.0.0.1") {
+      parsed.hostname = "localhost";
+      return [normalizedOrigin, parsed.origin];
+    }
+  } catch (_error) {
+    return [normalizedOrigin];
+  }
+
+  return [normalizedOrigin];
+}
+
+const allowedOrigins = Array.from(
+  new Set(corsOrigin.split(",").flatMap((origin) => expandLoopbackOrigin(origin)))
+);
 const allowAnyOrigin = allowedOrigins.includes("*");
 const MAX_AVATAR_DATA_URL_LENGTH = Number(
   process.env.MAX_AVATAR_DATA_URL_LENGTH || 4 * 1024 * 1024
