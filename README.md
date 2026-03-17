@@ -178,6 +178,37 @@ npm run server
 npm start
 ```
 
+## Dev seed
+
+Чтобы быстро получить локальные тестовые данные:
+
+```bash
+npm run seed:dev
+```
+
+Seed создаёт:
+
+- organizer user
+- participant user
+- classic quiz
+- live-ready quiz
+- one classic attempt
+
+Тестовые логины:
+
+- `organizer.dev@example.com` / `Organizer123!`
+- `participant.dev@example.com` / `Participant123!`
+
+Доступные join codes:
+
+- `CLASS1`
+- `LIVE01`
+
+Важно:
+
+- live session заранее не создаётся
+- для ручной проверки live flow её нужно запускать из UI organizer на seeded live-ready quiz
+
 ## URL по умолчанию
 
 - frontend: `http://localhost:3000`

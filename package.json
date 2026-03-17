@@ -24,6 +24,7 @@
     "start": "react-scripts start",
     "server": "node server/index.js",
     "dev": "concurrently \"npm run server\" \"npm start\"",
+    "seed:dev": "node server/scripts/seed-dev.js",
     "build": "react-scripts build",
     "verify": "node --check server/index.js && node --check server/db.js && react-scripts build",
     "test": "react-scripts test",
