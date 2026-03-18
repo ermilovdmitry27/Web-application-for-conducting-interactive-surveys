@@ -27,6 +27,7 @@
     "reset:db": "node server/scripts/reset-db.js",
     "seed:dev": "node server/scripts/seed-dev.js",
     "seed:reset": "npm run reset:db && npm run seed:dev",
+    "uploads:cleanup": "node server/scripts/cleanup-orphan-question-images.js",
     "build": "react-scripts build",
     "verify": "node --check server/index.js && node --check server/db.js && react-scripts build",
     "test": "react-scripts test",

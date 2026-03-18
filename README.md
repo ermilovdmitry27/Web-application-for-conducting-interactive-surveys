@@ -240,6 +240,22 @@ npm run seed:dev
 - удаляются данные только project tables: `users`, `quizzes`, `quiz_attempts`, `quiz_sessions`, `quiz_session_participants`, `quiz_session_answers`
 - рабочее локальное состояние восстанавливается командой `npm run seed:dev` или `npm run seed:reset`
 
+## Uploads cleanup
+
+Для ручной cleanup-проверки orphaned question images:
+
+```bash
+npm run uploads:cleanup
+```
+
+Это manual/devops-команда только для local managed question images из `/uploads/questions/...`.
+Script:
+
+- читает ссылки на question images из `quizzes.questions_json`
+- игнорирует внешние `imageUrl`
+- сравнивает их с файлами в `server/uploads/questions`
+- удаляет только orphaned files старше 24 часов
+
 ## Security baseline
 
 Backend уже включает минимальный baseline security hardening:
