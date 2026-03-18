@@ -1300,6 +1300,27 @@
   font-weight: 700;
 }
 
+.asyncStateNotice {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--line-strong);
+  background: var(--shell-bg-soft);
+}
+
+.asyncStateNoticeError {
+  border-color: rgba(199, 74, 74, 0.18);
+  background: rgba(199, 74, 74, 0.08);
+}
+
+.asyncStateNoticeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .statsGrid {
   margin-top: 16px;
   display: grid;

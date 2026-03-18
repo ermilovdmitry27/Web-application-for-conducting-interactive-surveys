@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
+import AsyncStateNotice from "../components/AsyncStateNotice";
 import CabinetTopMenu from "../components/CabinetTopMenu";
 import { getApiBaseUrl } from "../lib/api/config";
 import { requestWithAuth } from "../lib/api/requestWithAuth";
@@ -75,13 +76,13 @@ export default function ParticipantQuizPage() {
     [apiBaseUrl]
   );
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const load = async () => {
+  const loadLiveSession = useCallback(
+    async ({ isCancelled = () => false } = {}) => {
       if (!joinCode) {
-        setLoadError("Некорректный код комнаты.");
-        setIsLoading(false);
+        if (!isCancelled()) {
+          setLoadError("Некорректный код комнаты.");
+          setIsLoading(false);
+        }
         return;
       }
 
@@ -99,7 +100,11 @@ export default function ParticipantQuizPage() {
           throw new Error("Live-сессия недоступна.");
         }
 
-        if (isMounted) {
+        if (nextSession.status === "finished") {
+          await refreshLeaderboard(nextSession.sessionId);
+        }
+
+        if (!isCancelled()) {
           setSession(nextSession);
           setAttemptsInfo({
             used: Number(data?.attemptsUsed || 0),
@@ -108,26 +113,29 @@ export default function ParticipantQuizPage() {
           });
           setSelectedOptionIds([]);
           setSubmittedQuestionIndex(null);
-          if (nextSession.status === "finished") {
-            await refreshLeaderboard(nextSession.sessionId);
-          }
         }
       } catch (error) {
-        if (isMounted) {
+        if (!isCancelled()) {
           setLoadError(error.message || "Не удалось подключиться к live-сессии.");
         }
       } finally {
-        if (isMounted) {
+        if (!isCancelled()) {
           setIsLoading(false);
         }
       }
-    };
+    },
+    [apiBaseUrl, joinCode, refreshLeaderboard]
+  );
 
-    load();
+  useEffect(() => {
+    let isCancelled = false;
+    loadLiveSession({
+      isCancelled: () => isCancelled,
+    });
     return () => {
-      isMounted = false;
+      isCancelled = true;
     };
-  }, [apiBaseUrl, joinCode, refreshLeaderboard]);
+  }, [loadLiveSession]);
 
   const sessionStartedAt = session?.startedAt;
   const sessionStatus = session?.status;
@@ -489,8 +497,17 @@ export default function ParticipantQuizPage() {
           </div>
         </div>
 
-        {isLoading && <p className={styles.text}>Подключение к live-сессии...</p>}
-        {loadError && <p className={styles.formError}>{loadError}</p>}
+        {isLoading && (
+          <AsyncStateNotice variant="loading" message="Подключение к live-сессии..." />
+        )}
+        {!isLoading && loadError && (
+          <AsyncStateNotice
+            variant="error"
+            message={loadError}
+            actionLabel="Повторить"
+            onAction={() => loadLiveSession()}
+          />
+        )}
 
         {!isLoading && !loadError && session && (
           <>

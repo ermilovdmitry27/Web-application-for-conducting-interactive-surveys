@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
+import AsyncStateNotice from "../components/AsyncStateNotice";
 import CabinetTopMenu from "../components/CabinetTopMenu";
 import { getApiBaseUrl } from "../lib/api/config";
 import { requestWithAuth as sharedRequestWithAuth } from "../lib/api/requestWithAuth";
@@ -316,8 +317,17 @@ export default function ParticipantCabinet() {
             )}
           </div>
 
-          {isAttemptsLoading && <p className={styles.text}>Загрузка результатов...</p>}
-          {attemptsError && <p className={styles.formError}>{attemptsError}</p>}
+          {isAttemptsLoading && (
+            <AsyncStateNotice variant="loading" message="Загрузка результатов..." />
+          )}
+          {!isAttemptsLoading && attemptsError && (
+            <AsyncStateNotice
+              variant="error"
+              message={attemptsError}
+              actionLabel="Повторить"
+              onAction={() => loadAttempts()}
+            />
+          )}
           {!isAttemptsLoading && !attemptsError && attempts.length === 0 && (
             <p className={styles.text}>История пока пустая.</p>
           )}

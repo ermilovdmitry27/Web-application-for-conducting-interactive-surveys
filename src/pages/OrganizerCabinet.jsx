@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
+import AsyncStateNotice from "../components/AsyncStateNotice";
 import CabinetTopMenu from "../components/CabinetTopMenu";
 import FeatureDeckSection from "./organizer-cabinet/FeatureDeckSection";
 import QuizAnalyticsSection from "./organizer-cabinet/QuizAnalyticsSection";
@@ -148,10 +149,8 @@ export default function OrganizerCabinet() {
     return data;
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const load = async () => {
+  const loadDashboardData = useCallback(
+    async ({ isCancelled = () => false } = {}) => {
       try {
         setIsLoading(true);
         setIsAttemptsLoading(true);
@@ -166,7 +165,7 @@ export default function OrganizerCabinet() {
           requestWithAuth(`${apiBaseUrl}/api/live-sessions/mine?limit=20`, { method: "GET" }),
         ]);
 
-        if (!isMounted) {
+        if (isCancelled()) {
           return;
         }
 
@@ -198,19 +197,25 @@ export default function OrganizerCabinet() {
           );
         }
       } finally {
-        if (isMounted) {
+        if (!isCancelled()) {
           setIsLoading(false);
           setIsAttemptsLoading(false);
           setIsSessionsLoading(false);
         }
       }
-    };
+    },
+    [apiBaseUrl, requestWithAuth]
+  );
 
-    load();
+  useEffect(() => {
+    let isCancelled = false;
+    loadDashboardData({
+      isCancelled: () => isCancelled,
+    });
     return () => {
-      isMounted = false;
+      isCancelled = true;
     };
-  }, [apiBaseUrl, requestWithAuth]);
+  }, [loadDashboardData]);
 
   const handleDeleteQuiz = useCallback(
     async (quiz) => {
@@ -283,8 +288,17 @@ export default function OrganizerCabinet() {
               </p>
             </div>
 
-            {isLoading && <p className={styles.text}>Загрузка квизов...</p>}
-            {loadError && <p className={styles.formError}>{loadError}</p>}
+            {isLoading && (
+              <AsyncStateNotice variant="loading" message="Загрузка квизов..." />
+            )}
+            {!isLoading && loadError && (
+              <AsyncStateNotice
+                variant="error"
+                message={loadError}
+                actionLabel="Повторить"
+                onAction={() => loadDashboardData()}
+              />
+            )}
             {actionError && <p className={styles.formError}>{actionError}</p>}
             {!isLoading && !loadError && quizzes.length === 0 && (
               <p className={styles.text}>Пока нет созданных квизов.</p>
@@ -363,8 +377,17 @@ export default function OrganizerCabinet() {
                 Здесь видны последние попытки участников, их проценты, баллы и длительность прохождения.
               </p>
             </div>
-            {isAttemptsLoading && <p className={styles.text}>Загрузка попыток...</p>}
-            {attemptsError && <p className={styles.formError}>{attemptsError}</p>}
+            {isAttemptsLoading && (
+              <AsyncStateNotice variant="loading" message="Загрузка попыток..." />
+            )}
+            {!isAttemptsLoading && attemptsError && (
+              <AsyncStateNotice
+                variant="error"
+                message={attemptsError}
+                actionLabel="Повторить"
+                onAction={() => loadDashboardData()}
+              />
+            )}
             {!isAttemptsLoading && !attemptsError && attempts.length === 0 && (
               <p className={styles.text}>Пока никто не прошел ваши квизы.</p>
             )}
@@ -420,8 +443,17 @@ export default function OrganizerCabinet() {
                 История эфиров показывает период проведения, количество участников и итоговых победителей по каждой сессии.
               </p>
             </div>
-            {isSessionsLoading && <p className={styles.text}>Загрузка live-сессий...</p>}
-            {sessionsError && <p className={styles.formError}>{sessionsError}</p>}
+            {isSessionsLoading && (
+              <AsyncStateNotice variant="loading" message="Загрузка live-сессий..." />
+            )}
+            {!isSessionsLoading && sessionsError && (
+              <AsyncStateNotice
+                variant="error"
+                message={sessionsError}
+                actionLabel="Повторить"
+                onAction={() => loadDashboardData()}
+              />
+            )}
             {!isSessionsLoading && !sessionsError && liveSessions.length === 0 && (
               <p className={styles.text}>Пока нет проведенных live-сессий.</p>
             )}

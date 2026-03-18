@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
+import AsyncStateNotice from "../components/AsyncStateNotice";
 import CabinetTopMenu from "../components/CabinetTopMenu";
 import { getApiBaseUrl } from "../lib/api/config";
 import { requestWithAuth } from "../lib/api/requestWithAuth";
@@ -71,13 +72,13 @@ export default function OrganizerLivePage() {
     [apiBaseUrl]
   );
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const load = async () => {
+  const loadLiveSession = useCallback(
+    async ({ isCancelled = () => false } = {}) => {
       if (!Number.isInteger(quizId) || quizId < 1) {
-        setLoadError("Некорректный id квиза.");
-        setIsLoading(false);
+        if (!isCancelled()) {
+          setLoadError("Некорректный id квиза.");
+          setIsLoading(false);
+        }
         return;
       }
 
@@ -94,28 +95,35 @@ export default function OrganizerLivePage() {
           throw new Error("Не удалось запустить live-сессию.");
         }
 
-        if (isMounted) {
+        if (nextSession.status === "finished") {
+          await refreshLeaderboard(nextSession.sessionId);
+        }
+
+        if (!isCancelled()) {
           setSession(nextSession);
-          if (nextSession.status === "finished") {
-            await refreshLeaderboard(nextSession.sessionId);
-          }
         }
       } catch (error) {
-        if (isMounted) {
+        if (!isCancelled()) {
           setLoadError(error.message || "Не удалось открыть live-сессию.");
         }
       } finally {
-        if (isMounted) {
+        if (!isCancelled()) {
           setIsLoading(false);
         }
       }
-    };
+    },
+    [apiBaseUrl, quizId, refreshLeaderboard]
+  );
 
-    load();
+  useEffect(() => {
+    let isCancelled = false;
+    loadLiveSession({
+      isCancelled: () => isCancelled,
+    });
     return () => {
-      isMounted = false;
+      isCancelled = true;
     };
-  }, [apiBaseUrl, quizId, refreshLeaderboard]);
+  }, [loadLiveSession]);
 
   useEffect(() => {
     const sessionId = Number(session?.sessionId);
@@ -495,8 +503,17 @@ export default function OrganizerLivePage() {
           </div>
         </div>
 
-        {isLoading && <p className={styles.text}>Подготовка live-сессии...</p>}
-        {loadError && <p className={styles.formError}>{loadError}</p>}
+        {isLoading && (
+          <AsyncStateNotice variant="loading" message="Подготовка live-сессии..." />
+        )}
+        {!isLoading && loadError && (
+          <AsyncStateNotice
+            variant="error"
+            message={loadError}
+            actionLabel="Повторить"
+            onAction={() => loadLiveSession()}
+          />
+        )}
 
         {!isLoading && !loadError && session && (
           <>

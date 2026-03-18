@@ -15,6 +15,16 @@ export default function ActiveQuestionForm({
   onOptionToggle,
   onSubmit,
 }) {
+  const statusCallout = isPaused
+    ? "Организатор поставил эфир на паузу. Таймер остановлен, новые ответы временно не принимаются."
+    : isQuestionAnswered
+      ? allowAnswerChanges
+        ? "Ответ сохранен. До смены вопроса можно изменить выбор и отправить его заново."
+        : "Ответ принят. Ожидайте следующий вопрос от организатора."
+      : !isQuestionExpired
+        ? "Выберите вариант и отправьте ответ до окончания таймера."
+        : "";
+
   return (
     <form className={styles.liveQuestionForm} onSubmit={onSubmit}>
       <div className={styles.liveQuestionHeader}>
@@ -62,6 +72,10 @@ export default function ActiveQuestionForm({
           </label>
         ))}
       </div>
+
+      {statusCallout && (
+        <div className={styles.liveResultCallout}>{statusCallout}</div>
+      )}
 
       {isQuestionExpired && (
         <p className={styles.formError}>Время на этот вопрос вышло. Ожидайте следующий вопрос.</p>

@@ -10,6 +10,12 @@ export default function ActiveQuestionPanel({
   participantsCount,
   answeredParticipants,
 }) {
+  const statusCallout = isPaused
+    ? "Эфир на паузе. Таймер остановлен, новые ответы временно не принимаются."
+    : questionRemainingSeconds > 0
+      ? `Вопрос открыт. До автоперехода осталось ${formatSeconds(questionRemainingSeconds)}.`
+      : "Время на текущий вопрос вышло. Можно дождаться автоперехода или переключить эфир вручную.";
+
   return (
     <div className={styles.liveQuestionForm}>
       <div className={styles.liveQuestionHeader}>
@@ -51,6 +57,8 @@ export default function ActiveQuestionPanel({
           </p>
         ))}
       </div>
+
+      <div className={styles.liveResultCallout}>{statusCallout}</div>
 
       <div className={styles.liveResultCallout}>
         Ответов на текущий вопрос: {currentQuestionAnswersCount}/{participantsCount}
