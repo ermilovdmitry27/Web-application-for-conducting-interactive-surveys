@@ -14,7 +14,6 @@ export default function QuizAnalyticsSection({
   return (
     <section className={styles.card}>
       <div className={styles.sectionHeader}>
-        <p className={styles.sectionEyebrow}>Analytics</p>
         <h1 className={styles.title}>Статистика по квизам</h1>
         <p className={styles.sectionLead}>
           Смотрите общую картину по платформе и отдельно оценивайте эффективность каждого сценария.

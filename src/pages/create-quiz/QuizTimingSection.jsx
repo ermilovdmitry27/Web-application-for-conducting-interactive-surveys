@@ -21,7 +21,6 @@ export default function QuizTimingSection({
   return (
     <section className={styles.sectionPanel}>
       <div className={styles.sectionHeader}>
-        <p className={styles.sectionEyebrow}>Timing and limits</p>
         <h2 className={styles.sectionTitle}>Темп прохождения</h2>
         <p className={styles.sectionText}>
           Эти параметры определяют длительность квиза, лимит попыток и число карточек вопросов в

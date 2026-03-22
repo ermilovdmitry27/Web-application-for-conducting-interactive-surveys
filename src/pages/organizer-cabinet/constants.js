@@ -20,11 +20,11 @@ export const ORGANIZER_SIGNALS = [
 
 export const ORGANIZER_NOTES = [
   {
-    label: "Create",
+    label: "СОЗДАНИЕ",
     text: "Новый квиз создается из кабинета и сразу получает комнату с кодом подключения.",
   },
   {
-    label: "Monitor",
+    label: "МОНИТОРИНГ",
     text: "Live-сессии, попытки участников и итоговые рейтинги доступны в одной панели.",
   },
 ];

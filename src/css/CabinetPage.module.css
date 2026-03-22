@@ -102,14 +102,6 @@
   min-width: 0;
 }
 
-.profileLabel {
-  font-family: var(--font-label);
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
 .profileUser {
   color: var(--text);
   font-size: 14px;
@@ -333,6 +325,7 @@
 .profilePanelAvatarLarge {
   width: 104px;
   height: 104px;
+  margin: 0 auto;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
     0 18px 32px rgba(37, 99, 235, 0.12);
@@ -341,6 +334,8 @@
 .profileMediaBody {
   display: grid;
   gap: 8px;
+  justify-items: center;
+  text-align: center;
 }
 
 .profileMediaTitle {
@@ -365,6 +360,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  justify-content: center;
 }
 
 .profilePageGrid {
@@ -885,6 +881,10 @@
   gap: 24px;
 }
 
+.sectionBlockTopOffset {
+  margin-top: 12px;
+}
+
 .card,
 .wsPanel,
 .quizPageCard {
@@ -987,6 +987,43 @@
   overflow: hidden;
 }
 
+.resultGroupHeader {
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-strong);
+}
+
+.liveSessionPanel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.liveSessionBody {
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.liveSessionBody .liveSessionMeta {
+  margin: 0;
+}
+
+.liveSessionWinners {
+  margin-top: 0;
+}
+
+.resultGroupHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.resultGroupToggleButton {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+}
+
 .resultGroupButton {
   width: 100%;
   padding: 18px;
@@ -1053,6 +1090,23 @@
   letter-spacing: 0.12em;
 }
 
+.resultGroupToggleLabel {
+  color: var(--muted);
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.resultGroupIconButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .resultGroupChevron {
   width: 36px;
   height: 36px;
@@ -1065,6 +1119,10 @@
   color: var(--text);
   font-size: 16px;
   transition: transform 0.2s ease;
+}
+
+.resultGroupIconButton:hover .resultGroupChevron {
+  background: var(--menu-hover);
 }
 
 .resultGroupChevronOpen {
@@ -1157,7 +1215,6 @@
 .statLabel,
 .liveWsStatus,
 .liveStatusBadge,
-.profileLabel,
 .fieldMeta {
   font-family: var(--font-label);
   letter-spacing: 0.14em;
@@ -1329,26 +1386,32 @@
 }
 
 .statCard {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
   padding: 18px;
   border-radius: 16px;
   background: var(--shell-bg-soft);
   border: 1px solid var(--line);
+  text-align: center;
 }
 
 .statLabel {
   margin: 0;
   color: var(--muted);
   font-size: 10px;
+  white-space: nowrap;
 }
 
 .statValue {
-  margin: 10px 0 0;
+  margin: 0;
   color: var(--text);
   font-family: var(--font-heading);
   font-size: clamp(30px, 3.5vw, 42px);
   font-weight: 800;
   line-height: 0.96;
   letter-spacing: -0.05em;
+  text-align: center;
 }
 
 .joinQuizForm {
@@ -1690,9 +1753,6 @@
   position: relative;
 }
 
-.workspaceEyebrow,
-.commandEyebrow,
-.featureDeckLabel,
 .archiveLaneEyebrow,
 .liveStateEyebrow,
 .liveSidebarLabel {
@@ -1703,10 +1763,6 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-}
-
-.workspaceEyebrow {
-  color: var(--hero-label);
 }
 
 .workspaceTitle {
@@ -1836,10 +1892,6 @@
   color: var(--text);
 }
 
-.commandEyebrow {
-  color: var(--contrast-panel-label);
-}
-
 .commandButton {
   min-height: 52px;
   border-radius: 14px;
@@ -1852,6 +1904,13 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   cursor: pointer;
+}
+
+.heroCommandButton {
+  margin-top: 8px;
+  min-height: 50px;
+  padding: 0 20px;
+  border-radius: 12px;
 }
 
 .noteStack {
@@ -1869,12 +1928,12 @@
 
 .utilityNoteLabel {
   margin: 0;
-  color: var(--contrast-panel-label);
-  font-family: var(--font-label);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  color: var(--contrast-panel-text);
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
 .utilityNoteText {
@@ -1901,10 +1960,6 @@
 .featureDeckTitle {
   margin-top: 0;
   color: var(--contrast-panel-text);
-}
-
-.featureDeckLabel {
-  color: var(--contrast-panel-label);
 }
 
 .featureDeckText {
@@ -2119,10 +2174,6 @@
   border: 1px solid rgba(36, 87, 255, 0.16);
   color: var(--primary-strong);
   font-weight: 700;
-}
-
-.liveHeroCopy .sectionEyebrow {
-  color: var(--hero-card-muted);
 }
 
 .liveHeroCopy .title {

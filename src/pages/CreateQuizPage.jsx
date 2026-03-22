@@ -31,6 +31,8 @@ import {
   normalizeQuestionsForForm,
 } from "./create-quiz/form-utils";
 
+const CUSTOM_CATEGORY_VALUE = "__custom__";
+
 function getStoredUser() {
   try {
     const raw = localStorage.getItem("auth_user");
@@ -51,6 +53,8 @@ export default function CreateQuizPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState(CATEGORY_OPTIONS[0].value);
+  const [customCategory, setCustomCategory] = useState("");
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(DEFAULT_DURATION_MINUTES);
   const [questionTimeSeconds, setQuestionTimeSeconds] = useState(DEFAULT_QUESTION_TIME_SECONDS);
   const [maxAttempts, setMaxAttempts] = useState(DEFAULT_MAX_ATTEMPTS);
@@ -73,20 +77,11 @@ export default function CreateQuizPage() {
     () => questions.reduce((sum, question) => sum + question.options.length, 0),
     [questions]
   );
-  const categoryOptions = useMemo(() => {
-    const normalized = String(category || "").trim();
-    if (!normalized) {
-      return CATEGORY_OPTIONS;
-    }
-    if (CATEGORY_OPTIONS.some((option) => option.value === normalized)) {
-      return CATEGORY_OPTIONS;
-    }
-    return [{ value: normalized, label: normalized }, ...CATEGORY_OPTIONS];
-  }, [category]);
-  const selectedCategoryLabel = useMemo(() => {
-    const matched = categoryOptions.find((option) => option.value === category);
-    return matched?.label || category;
-  }, [category, categoryOptions]);
+  const categoryOptions = useMemo(
+    () => [...CATEGORY_OPTIONS, { value: CUSTOM_CATEGORY_VALUE, label: "Своя категория" }],
+    []
+  );
+  const selectedCategoryValue = isCustomCategory ? CUSTOM_CATEGORY_VALUE : category;
 
   const updateQuestionUploadState = useCallback((questionIndex, patch) => {
     setQuestionUploadStates((prev) => ({
@@ -132,7 +127,25 @@ export default function CreateQuizPage() {
         const normalizedQuestions = normalizeQuestionsForForm(quiz.questions);
         setTitle(typeof quiz.title === "string" ? quiz.title : "");
         setDescription(typeof quiz.description === "string" ? quiz.description : "");
-        setCategory(typeof quiz.category === "string" && quiz.category ? quiz.category : CATEGORY_OPTIONS[0].value);
+        const normalizedCategory =
+          typeof quiz.category === "string" && quiz.category ? quiz.category.trim() : "";
+        const matchedCategory = CATEGORY_OPTIONS.find(
+          (option) => option.value === normalizedCategory
+        );
+
+        if (matchedCategory) {
+          setCategory(matchedCategory.value);
+          setCustomCategory("");
+          setIsCustomCategory(false);
+        } else if (normalizedCategory) {
+          setCategory(CATEGORY_OPTIONS[0].value);
+          setCustomCategory(normalizedCategory);
+          setIsCustomCategory(true);
+        } else {
+          setCategory(CATEGORY_OPTIONS[0].value);
+          setCustomCategory("");
+          setIsCustomCategory(false);
+        }
         setDurationMinutes(Number(quiz.durationMinutes || DEFAULT_DURATION_MINUTES));
         setQuestionTimeSeconds(Number(quiz.questionTimeSeconds || DEFAULT_QUESTION_TIME_SECONDS));
         setMaxAttempts(Number(quiz.maxAttemptsPerParticipant || DEFAULT_MAX_ATTEMPTS));
@@ -166,6 +179,18 @@ export default function CreateQuizPage() {
       : MIN_QUESTIONS;
     setQuestionCount(safeCount);
     setQuestions((prev) => buildQuestions(safeCount, prev));
+  };
+
+  const handleCategoryChange = (event) => {
+    const nextValue = String(event.target.value || "").trim();
+
+    if (nextValue === CUSTOM_CATEGORY_VALUE) {
+      setIsCustomCategory(true);
+      return;
+    }
+
+    setIsCustomCategory(false);
+    setCategory(nextValue || CATEGORY_OPTIONS[0].value);
   };
 
   const updateQuestion = (questionIndex, updater) => {
@@ -335,6 +360,7 @@ export default function CreateQuizPage() {
 
     const nextTitle = title.trim();
     const nextDescription = description.trim();
+    const nextCategory = isCustomCategory ? customCategory.trim() : category.trim();
     const safeDurationMinutes = Number(durationMinutes);
     const safeQuestionTimeSeconds = Number(questionTimeSeconds);
     const safeMaxAttempts = Number(maxAttempts);
@@ -343,8 +369,8 @@ export default function CreateQuizPage() {
       setSubmitError("Введите название квиза.");
       return;
     }
-    if (!category) {
-      setSubmitError("Выберите категорию.");
+    if (!nextCategory) {
+      setSubmitError(isCustomCategory ? "Введите свою категорию." : "Выберите категорию.");
       return;
     }
     if (!Number.isInteger(safeDurationMinutes) || safeDurationMinutes < 1) {
@@ -408,7 +434,7 @@ export default function CreateQuizPage() {
     const payload = {
       title: nextTitle,
       description: nextDescription,
-      category,
+      category: nextCategory,
       isActive,
       durationMinutes: safeDurationMinutes,
       questionTimeSeconds: safeQuestionTimeSeconds,
@@ -476,10 +502,6 @@ export default function CreateQuizPage() {
           </p>
         </div>
 
-        <h1 className={styles.title}>
-          {isEditMode ? "Редактирование квиза" : "Создание квиза"}
-        </h1>
-
         {isPageLoading && <p className={styles.metaText}>Загрузка квиза...</p>}
         {!isPageLoading && pageError && <p className={styles.errorText}>{pageError}</p>}
 
@@ -487,7 +509,6 @@ export default function CreateQuizPage() {
           <form className={styles.form} onSubmit={handleSubmit}>
             <QuizHeroSection
               isEditMode={isEditMode}
-              selectedCategoryLabel={selectedCategoryLabel}
               questionsCount={questions.length}
               questionTimeSeconds={questionTimeSeconds}
               maxAttempts={maxAttempts}
@@ -496,10 +517,13 @@ export default function CreateQuizPage() {
             <QuizBasicsSection
               title={title}
               description={description}
-              category={category}
+              selectedCategoryValue={selectedCategoryValue}
+              customCategory={customCategory}
+              isCustomCategory={isCustomCategory}
               categoryOptions={categoryOptions}
               onTitleChange={(event) => setTitle(event.target.value)}
-              onCategoryChange={(event) => setCategory(event.target.value)}
+              onCategoryChange={handleCategoryChange}
+              onCustomCategoryChange={(event) => setCustomCategory(event.target.value)}
               onDescriptionChange={(event) => setDescription(event.target.value)}
             />
 

@@ -3,16 +3,18 @@ import styles from "../../css/CreateQuizPage.module.css";
 export default function QuizBasicsSection({
   title,
   description,
-  category,
+  selectedCategoryValue,
+  customCategory,
+  isCustomCategory,
   categoryOptions,
   onTitleChange,
   onCategoryChange,
+  onCustomCategoryChange,
   onDescriptionChange,
 }) {
   return (
     <section className={styles.sectionPanel}>
       <div className={styles.sectionHeader}>
-        <p className={styles.sectionEyebrow}>Base setup</p>
         <h2 className={styles.sectionTitle}>Основа квиза</h2>
         <p className={styles.sectionText}>
           Название, категория и описание формируют карточку квиза в кабинете и помогают отличать сценарии друг от друга.
@@ -35,13 +37,24 @@ export default function QuizBasicsSection({
 
         <label className={styles.label}>
           Категория
-          <select className={styles.input} value={category} onChange={onCategoryChange}>
+          <select className={styles.input} value={selectedCategoryValue} onChange={onCategoryChange}>
             {categoryOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </select>
+          {isCustomCategory && (
+            <input
+              className={styles.input}
+              type="text"
+              value={customCategory}
+              onChange={onCustomCategoryChange}
+              maxLength={80}
+              placeholder="Введите свою категорию"
+              required
+            />
+          )}
         </label>
       </div>
 

@@ -204,7 +204,6 @@ export default function CabinetTopMenu({
             </span>
           </button>
           <div className={styles.profileSummary}>
-            <span className={styles.profileLabel}>Аккаунт</span>
             <span className={styles.profileUser}>{compactUserName}</span>
           </div>
           <button

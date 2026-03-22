@@ -13,7 +13,6 @@ export default function LiveHeroSection({
   return (
     <section className={styles.liveHeroPanel}>
       <div className={styles.liveHeroCopy}>
-        <p className={styles.sectionEyebrow}>Live control room</p>
         <h1 className={styles.title}>{quizTitle}</h1>
         <p className={styles.sectionLead}>
           Управляйте стартом, паузой и переходом между вопросами, а также наблюдайте за тем, как участники отвечают

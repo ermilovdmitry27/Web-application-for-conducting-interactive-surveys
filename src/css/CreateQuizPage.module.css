@@ -106,8 +106,6 @@
   gap: 12px;
 }
 
-.heroEyebrow,
-.sectionEyebrow,
 .summaryLabel {
   margin: 0;
   color: var(--primary);
@@ -116,10 +114,6 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-}
-
-.heroEyebrow {
-  color: var(--hero-label);
 }
 
 .heroLead,
@@ -131,6 +125,7 @@
 }
 
 .heroHeader .title {
+  margin: 0;
   color: var(--hero-text);
   text-shadow: var(--hero-title-shadow);
 }
@@ -141,7 +136,7 @@
 
 .summaryGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -167,8 +162,12 @@
 }
 
 .summaryCard {
+  display: grid;
+  justify-items: center;
+  min-width: 0;
   padding: 18px;
   border-radius: 16px;
+  text-align: center;
 }
 
 .summaryValue {
@@ -380,9 +379,10 @@
 }
 
 .optionList {
+  margin-top: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 .optionRow {
@@ -390,6 +390,7 @@
   grid-template-columns: 130px 1fr auto;
   gap: 10px;
   align-items: center;
+  padding-left: 8px;
 }
 
 .optionCheck {
@@ -401,6 +402,7 @@
 }
 
 .optionAdd {
+  margin-top: 10px;
   align-self: flex-start;
 }
 

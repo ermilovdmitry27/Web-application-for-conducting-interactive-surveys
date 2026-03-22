@@ -17,7 +17,6 @@ export default function QuestionFlowSection({
   return (
     <section className={styles.sectionPanel}>
       <div className={styles.sectionHeader}>
-        <p className={styles.sectionEyebrow}>Question flow</p>
         <h2 className={styles.sectionTitle}>Сценарий вопросов</h2>
         <p className={styles.sectionText}>
           Для каждого шага можно выбрать тип вопроса, режим ответа, изображение и набор правильных вариантов.

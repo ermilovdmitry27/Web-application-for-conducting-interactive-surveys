@@ -11,7 +11,6 @@ export default function WorkspaceHeroSection({
   return (
     <section className={styles.workspaceHero}>
       <div className={styles.workspaceHeroMain}>
-        <p className={styles.workspaceEyebrow}>Organizer workspace</p>
         <h1 className={styles.workspaceTitle}>
           {firstName}, управляйте квизами, live-комнатами и аналитикой из одного кабинета.
         </h1>
@@ -30,13 +29,16 @@ export default function WorkspaceHeroSection({
       <aside className={styles.workspaceHeroAside}>
         <section className={styles.commandCard}>
           <div className={styles.commandHeader}>
-            <p className={styles.commandEyebrow}>Control room</p>
             <h2 className={styles.commandTitle}>Создать новый квиз</h2>
             <p className={styles.commandText}>
               Запустите новый сценарий, настройте вопросы и подготовьте комнату для live-сессии.
             </p>
           </div>
-          <button type="button" className={styles.commandButton} onClick={onCreateQuiz}>
+          <button
+            type="button"
+            className={`${styles.commandButton} ${styles.heroCommandButton}`}
+            onClick={onCreateQuiz}
+          >
             Создать квиз
           </button>
         </section>

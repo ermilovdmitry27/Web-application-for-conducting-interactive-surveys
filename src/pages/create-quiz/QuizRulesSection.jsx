@@ -13,7 +13,6 @@ export default function QuizRulesSection({
   return (
     <section className={styles.sectionPanel}>
       <div className={styles.sectionHeader}>
-        <p className={styles.sectionEyebrow}>Rules</p>
         <h2 className={styles.sectionTitle}>Поведение квиза</h2>
         <p className={styles.sectionText}>
           Управляйте активностью сценария, перемешиванием вопросов и тем, как участники видят свои ответы.

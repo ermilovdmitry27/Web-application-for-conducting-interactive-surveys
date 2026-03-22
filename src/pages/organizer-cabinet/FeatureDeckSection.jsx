@@ -5,7 +5,6 @@ export default function FeatureDeckSection({ signals }) {
     <section className={styles.featureDeck}>
       {signals.map((item) => (
         <article key={item.title} className={styles.featureDeckCard}>
-          <p className={styles.featureDeckLabel}>{item.label}</p>
           <h2 className={styles.featureDeckTitle}>{item.title}</h2>
           <p className={styles.featureDeckText}>{item.text}</p>
         </article>

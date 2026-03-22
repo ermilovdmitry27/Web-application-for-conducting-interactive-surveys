@@ -34,6 +34,10 @@ export default function OrganizerCabinet() {
   const [sessionsError, setSessionsError] = useState("");
   const [actionError, setActionError] = useState("");
   const [deletingQuizId, setDeletingQuizId] = useState(null);
+  const [collapsedAttemptGroupKeys, setCollapsedAttemptGroupKeys] = useState({});
+  const [expandedLiveGroupKeys, setExpandedLiveGroupKeys] = useState({});
+  const [hiddenAttemptGroupKeys, setHiddenAttemptGroupKeys] = useState({});
+  const [hiddenLiveGroupKeys, setHiddenLiveGroupKeys] = useState({});
   const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
   useEffect(() => {
@@ -118,6 +122,89 @@ export default function OrganizerCabinet() {
         return String(left.title || "").localeCompare(String(right.title || ""), "ru");
       });
   }, [attempts, liveSessions, quizzes]);
+  const quizzesById = useMemo(
+    () => new Map(quizzes.map((quiz) => [Number(quiz.id), quiz])),
+    [quizzes]
+  );
+  const attemptGroups = useMemo(() => {
+    const groups = new Map();
+
+    attempts.forEach((attempt) => {
+      const rawQuizId = Number(attempt.quizId);
+      const quizId = Number.isFinite(rawQuizId) && rawQuizId > 0 ? rawQuizId : null;
+      const quizTitle = String(attempt.quizTitle || "Без названия").trim() || "Без названия";
+      const key = quizId ? `quiz:${quizId}` : `title:${quizTitle}`;
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          quizId,
+          quizTitle,
+          attempts: [],
+          participantIds: new Set(),
+        });
+      }
+
+      const group = groups.get(key);
+      group.attempts.push(attempt);
+
+      const participantId = Number(attempt.participantId);
+      if (Number.isFinite(participantId) && participantId > 0) {
+        group.participantIds.add(participantId);
+      }
+    });
+
+    return Array.from(groups.values()).map((group) => ({
+      key: group.key,
+      quizId: group.quizId,
+      quizTitle: group.quizTitle,
+      attempts: group.attempts,
+      participantsCount: group.participantIds.size,
+      quiz:
+        group.quizId != null
+          ? quizzesById.get(group.quizId) || { id: group.quizId, title: group.quizTitle }
+          : null,
+    }));
+  }, [attempts, quizzesById]);
+  const liveSessionGroups = useMemo(() => {
+    const groups = new Map();
+
+    liveSessions.forEach((session) => {
+      const rawQuizId = Number(session.quizId);
+      const quizId = Number.isFinite(rawQuizId) && rawQuizId > 0 ? rawQuizId : null;
+      const quizTitle = String(session.quizTitle || "Без названия").trim() || "Без названия";
+      const key = quizId ? `quiz:${quizId}` : `title:${quizTitle}`;
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          quizId,
+          quizTitle,
+          sessions: [],
+        });
+      }
+
+      groups.get(key).sessions.push(session);
+    });
+
+    return Array.from(groups.values()).map((group) => {
+      const latestSession = group.sessions[0] || null;
+      const latestStatusLabel =
+        latestSession?.status === "finished" ? "Завершен" : latestSession ? "Идет" : "";
+
+      return {
+        key: group.key,
+        quizId: group.quizId,
+        quizTitle: group.quizTitle,
+        sessions: group.sessions,
+        latestStatusLabel,
+        quiz:
+          group.quizId != null
+            ? quizzesById.get(group.quizId) || { id: group.quizId, title: group.quizTitle }
+            : null,
+      };
+    });
+  }, [liveSessions, quizzesById]);
 
   const requestWithAuth = useCallback(async (url, options = {}) => {
     const token = localStorage.getItem("auth_token");
@@ -240,6 +327,30 @@ export default function OrganizerCabinet() {
     },
     [apiBaseUrl, requestWithAuth]
   );
+  const toggleAttemptGroup = useCallback((groupKey) => {
+    setCollapsedAttemptGroupKeys((prev) => ({
+      ...prev,
+      [groupKey]: !prev[groupKey],
+    }));
+  }, []);
+  const hideAttemptGroup = useCallback((groupKey) => {
+    setHiddenAttemptGroupKeys((prev) => ({
+      ...prev,
+      [groupKey]: true,
+    }));
+  }, []);
+  const toggleLiveGroup = useCallback((groupKey) => {
+    setExpandedLiveGroupKeys((prev) => ({
+      ...prev,
+      [groupKey]: !prev[groupKey],
+    }));
+  }, []);
+  const hideLiveGroup = useCallback((groupKey) => {
+    setHiddenLiveGroupKeys((prev) => ({
+      ...prev,
+      [groupKey]: true,
+    }));
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("auth_token");
@@ -278,10 +389,9 @@ export default function OrganizerCabinet() {
       </section>
 
       <section className={styles.blocks}>
-        <div className={styles.sectionBlock}>
+        <div className={`${styles.sectionBlock} ${styles.sectionBlockTopOffset}`}>
           <section className={styles.card}>
             <div className={styles.sectionHeader}>
-              <p className={styles.sectionEyebrow}>Quiz library</p>
               <h1 className={styles.title}>Мои квизы</h1>
               <p className={styles.sectionLead}>
                 Конструктор сценариев, параметры комнаты, лимиты попыток и быстрый переход к live-режиму находятся в одном списке.
@@ -371,7 +481,6 @@ export default function OrganizerCabinet() {
         <div className={styles.sectionBlock}>
           <section className={styles.card}>
             <div className={styles.sectionHeader}>
-              <p className={styles.sectionEyebrow}>Participants</p>
               <h1 className={styles.title}>Кто прошел квизы</h1>
               <p className={styles.sectionLead}>
                 Здесь видны последние попытки участников, их проценты, баллы и длительность прохождения.
@@ -392,43 +501,102 @@ export default function OrganizerCabinet() {
               <p className={styles.text}>Пока никто не прошел ваши квизы.</p>
             )}
 
-            <ul className={styles.resultList}>
-              {attempts.map((attempt) => {
-                const participantName = String(attempt.participantName || "Участник").trim();
-                const avatarChar = participantName.charAt(0).toUpperCase() || "U";
+            <ul className={styles.resultGroupList}>
+              {attemptGroups.map((group) => {
+                if (hiddenAttemptGroupKeys[group.key]) {
+                  return null;
+                }
+                const isGroupExpanded = !collapsedAttemptGroupKeys[group.key];
+
                 return (
-                  <li key={attempt.id} className={styles.resultItem}>
-                    <div className={styles.resultMain}>
-                      <span className={styles.resultAvatar} aria-hidden="true">
-                        {attempt.participantAvatarDataUrl ? (
-                          <img
-                            className={styles.resultAvatarImage}
-                            src={attempt.participantAvatarDataUrl}
-                            alt=""
-                          />
-                        ) : (
-                          avatarChar
-                        )}
-                      </span>
-                      <div className={styles.resultInfo}>
-                        <p className={styles.resultName}>{participantName}</p>
-                        <p className={styles.resultScore}>
-                          {attempt.quizTitle}
-                          {attempt.isLive ? " • Live" : ""}
-                          {` • ${attempt.score}/${attempt.maxScore}`}
-                          {Number.isInteger(attempt.answeredQuestionsCount)
-                            ? ` • Ответов: ${attempt.answeredQuestionsCount}/${attempt.maxScore}`
+                  <li key={group.key} className={styles.resultGroupItem}>
+                    <div className={`${styles.liveSessionHead} ${styles.resultGroupHeader}`}>
+                      <div className={styles.resultGroupInfo}>
+                        <h3 className={styles.resultGroupTitle}>{group.quizTitle}</h3>
+                        <p className={styles.resultGroupMeta}>
+                          Попыток: {group.attempts.length}
+                          {group.participantsCount > 0
+                            ? ` • Участников: ${group.participantsCount}`
                             : ""}
-                          {attempt.timeSpentSeconds > 0
-                            ? ` • ${formatDurationSeconds(attempt.timeSpentSeconds)}`
-                            : ""}
-                          {attempt.createdAt ? ` • ${formatAttemptDate(attempt.createdAt)}` : ""}
                         </p>
                       </div>
+                      <div className={styles.resultGroupHeaderActions}>
+                        <button
+                          type="button"
+                          className={styles.participantSecondaryButton}
+                          onClick={() => hideAttemptGroup(group.key)}
+                        >
+                          Скрыть
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.resultGroupIconButton}
+                          onClick={() => toggleAttemptGroup(group.key)}
+                          aria-expanded={isGroupExpanded}
+                          aria-label={isGroupExpanded ? "Свернуть группу" : "Развернуть группу"}
+                        >
+                          <span
+                            className={`${styles.resultGroupChevron} ${
+                              isGroupExpanded ? styles.resultGroupChevronOpen : ""
+                            }`}
+                            aria-hidden="true"
+                          >
+                            ▾
+                          </span>
+                        </button>
+                      </div>
                     </div>
-                    <span className={`${styles.resultBadge} ${getResultBadgeClass(attempt.percentage)}`}>
-                      {attempt.percentage}%
-                    </span>
+
+                    {isGroupExpanded && (
+                      <ul className={styles.resultGroupAttempts}>
+                        {group.attempts.map((attempt) => {
+                          const participantName = String(
+                            attempt.participantName || "Участник"
+                          ).trim();
+                          const avatarChar = participantName.charAt(0).toUpperCase() || "U";
+                          return (
+                            <li key={attempt.id} className={styles.resultItem}>
+                              <div className={styles.resultMain}>
+                                <span className={styles.resultAvatar} aria-hidden="true">
+                                  {attempt.participantAvatarDataUrl ? (
+                                    <img
+                                      className={styles.resultAvatarImage}
+                                      src={attempt.participantAvatarDataUrl}
+                                      alt=""
+                                    />
+                                  ) : (
+                                    avatarChar
+                                  )}
+                                </span>
+                                <div className={styles.resultInfo}>
+                                  <p className={styles.resultName}>{participantName}</p>
+                                  <p className={styles.resultScore}>
+                                    {attempt.isLive ? "Live • " : ""}
+                                    {`${attempt.score}/${attempt.maxScore}`}
+                                    {Number.isInteger(attempt.answeredQuestionsCount)
+                                      ? ` • Ответов: ${attempt.answeredQuestionsCount}/${attempt.maxScore}`
+                                      : ""}
+                                    {attempt.timeSpentSeconds > 0
+                                      ? ` • ${formatDurationSeconds(attempt.timeSpentSeconds)}`
+                                      : ""}
+                                    {attempt.createdAt
+                                      ? ` • ${formatAttemptDate(attempt.createdAt)}`
+                                      : ""}
+                                  </p>
+                                </div>
+                              </div>
+                              <span
+                                className={`${styles.resultBadge} ${getResultBadgeClass(
+                                  attempt.percentage
+                                )}`}
+                              >
+                                {attempt.percentage}%
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </li>
                 );
               })}
@@ -437,7 +605,6 @@ export default function OrganizerCabinet() {
 
           <section className={styles.card}>
             <div className={styles.sectionHeader}>
-              <p className={styles.sectionEyebrow}>Broadcast archive</p>
               <h1 className={styles.title}>Проведенные live-сессии</h1>
               <p className={styles.sectionLead}>
                 История эфиров показывает период проведения, количество участников и итоговых победителей по каждой сессии.
@@ -458,42 +625,103 @@ export default function OrganizerCabinet() {
               <p className={styles.text}>Пока нет проведенных live-сессий.</p>
             )}
 
-            <ul className={styles.liveSessionList}>
-              {liveSessions.map((session) => (
-                <li key={session.id} className={styles.liveSessionItem}>
-                  <div className={styles.liveSessionHead}>
-                    <h3 className={styles.liveSessionTitle}>{session.quizTitle}</h3>
-                    <span
-                      className={`${styles.quizStateBadge} ${
-                        session.status === "finished" ? styles.quizStateActive : styles.quizStateDraft
-                      }`}
-                    >
-                      {session.status === "finished" ? "Завершен" : "Идет"}
-                    </span>
-                  </div>
+            <ul className={styles.resultGroupList}>
+              {liveSessionGroups.map((group) => {
+                if (hiddenLiveGroupKeys[group.key]) {
+                  return null;
+                }
+                const isGroupExpanded = Boolean(expandedLiveGroupKeys[group.key]);
 
-                  <p className={styles.liveSessionMeta}>
-                    Код: {session.quizJoinCode} • Участников: {session.participantsCount} • Вопросов: {session.questionCount}
-                  </p>
-                  <p className={styles.liveSessionMeta}>
-                    {formatSessionPeriod(session.startedAt, session.finishedAt)}
-                  </p>
-
-                  {Array.isArray(session.winners) && session.winners.length > 0 && (
-                    <ul className={styles.liveWinnerList}>
-                      {session.winners.map((winner) => (
-                        <li key={`${session.id}-${winner.participantId}-${winner.place}`} className={styles.liveWinnerItem}>
-                          <span>#{winner.place}</span>
-                          <span>{winner.participantName}</span>
-                          <span>
-                            {winner.score}/{winner.maxScore} ({winner.percentage}%)
+                return (
+                  <li key={group.key} className={styles.resultGroupItem}>
+                    <div className={`${styles.liveSessionHead} ${styles.resultGroupHeader}`}>
+                      <div className={styles.resultGroupInfo}>
+                        <h3 className={styles.resultGroupTitle}>{group.quizTitle}</h3>
+                        <p className={styles.resultGroupMeta}>
+                          Сессий: {group.sessions.length}
+                          {group.latestStatusLabel ? ` • Последняя: ${group.latestStatusLabel}` : ""}
+                        </p>
+                      </div>
+                      <div className={styles.resultGroupHeaderActions}>
+                        <button
+                          type="button"
+                          className={styles.participantSecondaryButton}
+                          onClick={() => hideLiveGroup(group.key)}
+                        >
+                          Скрыть
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.resultGroupIconButton}
+                          onClick={() => toggleLiveGroup(group.key)}
+                          aria-expanded={isGroupExpanded}
+                          aria-label={isGroupExpanded ? "Свернуть группу" : "Развернуть группу"}
+                        >
+                          <span
+                            className={`${styles.resultGroupChevron} ${
+                              isGroupExpanded ? styles.resultGroupChevronOpen : ""
+                            }`}
+                            aria-hidden="true"
+                          >
+                            ▾
                           </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
+                        </button>
+                      </div>
+                    </div>
+
+                    {isGroupExpanded && (
+                      <ul className={styles.resultGroupAttempts}>
+                        {group.sessions.map((session) => (
+                          <li
+                            key={session.id}
+                            className={`${styles.liveSessionItem} ${styles.liveSessionPanel}`}
+                          >
+                            <div className={`${styles.liveSessionHead} ${styles.resultGroupHeader}`}>
+                              <h3 className={styles.liveSessionTitle}>{session.quizTitle}</h3>
+                              <span
+                                className={`${styles.quizStateBadge} ${
+                                  session.status === "finished"
+                                    ? styles.quizStateActive
+                                    : styles.quizStateDraft
+                                }`}
+                              >
+                                {session.status === "finished" ? "Завершен" : "Идет"}
+                              </span>
+                            </div>
+
+                            <div className={styles.liveSessionBody}>
+                              <p className={styles.liveSessionMeta}>
+                                Код: {session.quizJoinCode} • Участников: {session.participantsCount} •
+                                Вопросов: {session.questionCount}
+                              </p>
+                              <p className={styles.liveSessionMeta}>
+                                {formatSessionPeriod(session.startedAt, session.finishedAt)}
+                              </p>
+
+                              {Array.isArray(session.winners) && session.winners.length > 0 && (
+                                <ul className={`${styles.liveWinnerList} ${styles.liveSessionWinners}`}>
+                                  {session.winners.map((winner) => (
+                                    <li
+                                      key={`${session.id}-${winner.participantId}-${winner.place}`}
+                                      className={styles.liveWinnerItem}
+                                    >
+                                      <span>#{winner.place}</span>
+                                      <span>{winner.participantName}</span>
+                                      <span>
+                                        {winner.score}/{winner.maxScore} ({winner.percentage}%)
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         </div>

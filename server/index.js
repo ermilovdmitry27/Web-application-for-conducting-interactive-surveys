@@ -2179,7 +2179,7 @@ async function start() {
     await ensureLiveSessionAnswersTable();
     await ensureQuizAttemptsTable();
     isServerReady = true;
-    server.listen(port, () => {
+    server.listen(port,"0.0.0.0", () => {
       console.log(`API server started on http://localhost:${port}`);
     });
   } catch (error) {

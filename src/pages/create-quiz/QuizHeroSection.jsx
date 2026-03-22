@@ -2,7 +2,6 @@ import styles from "../../css/CreateQuizPage.module.css";
 
 export default function QuizHeroSection({
   isEditMode,
-  selectedCategoryLabel,
   questionsCount,
   questionTimeSeconds,
   maxAttempts,
@@ -10,17 +9,15 @@ export default function QuizHeroSection({
   return (
     <div className={styles.heroHeader}>
       <div className={styles.heroCopy}>
-        <p className={styles.heroEyebrow}>{isEditMode ? "Quiz editor" : "Quiz builder"}</p>
+        <h1 className={styles.title}>
+          {isEditMode ? "Редактирование квиза" : "Создание квиза"}
+        </h1>
         <p className={styles.heroLead}>
           Соберите сценарий квиза: задайте тему, темп прохождения, правила показа ответов и
           подготовьте блок вопросов для live-сессии.
         </p>
       </div>
       <div className={styles.summaryGrid}>
-        <div className={styles.summaryCard}>
-          <p className={styles.summaryLabel}>Категория</p>
-          <p className={styles.summaryValue}>{selectedCategoryLabel || "—"}</p>
-        </div>
         <div className={styles.summaryCard}>
           <p className={styles.summaryLabel}>Вопросы</p>
           <p className={styles.summaryValue}>{questionsCount}</p>
