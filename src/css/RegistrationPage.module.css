@@ -393,7 +393,69 @@
     align-self: stretch;
   }
 
+  .eyebrow,
+  .formEyebrow,
+  .fieldCaption,
+  .fieldLabel,
+  .homeLink,
+  .backLink {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+
+  .heroTitle {
+    font-size: clamp(34px, 10vw, 48px);
+    line-height: 0.94;
+  }
+
+  .heroText,
+  .formText,
+  .loginPrompt,
+  .featureItem,
+  .agreementLabel {
+    font-size: 14px;
+    line-height: 1.58;
+  }
+
   .title {
-    font-size: 32px;
+    font-size: clamp(28px, 8vw, 36px);
+  }
+
+  .textRole {
+    font-size: 16px;
+  }
+
+  .authButton {
+    font-size: 13px;
+  }
+
+  .errorText,
+  .submitError,
+  .submitSuccess {
+    font-size: 13px;
+  }
+
+  .homeLink {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .inputField {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .roleOption {
+    min-height: 50px;
+    padding: 12px 14px;
+  }
+
+  .featureItem {
+    padding: 12px 14px 12px 36px;
+  }
+
+  .featureItem::before {
+    left: 14px;
+    top: 18px;
   }
 }

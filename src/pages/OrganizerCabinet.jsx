@@ -3,12 +3,15 @@ import { useNavigate } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
 import AsyncStateNotice from "../components/AsyncStateNotice";
 import CabinetTopMenu from "../components/CabinetTopMenu";
-import FeatureDeckSection from "./organizer-cabinet/FeatureDeckSection";
+import EditIcon from "../components/EditIcon";
+import LiveIcon from "../components/LiveIcon";
+import PlusIcon from "../components/PlusIcon";
+import TrashIcon from "../components/TrashIcon";
+import { getApiBaseUrl } from "../lib/api/config";
 import QuizAnalyticsSection from "./organizer-cabinet/QuizAnalyticsSection";
 import WorkspaceHeroSection from "./organizer-cabinet/WorkspaceHeroSection";
 import {
   AUTH_USER_UPDATED_EVENT,
-  ORGANIZER_NOTES,
   ORGANIZER_SIGNALS,
 } from "./organizer-cabinet/constants";
 import {
@@ -34,11 +37,12 @@ export default function OrganizerCabinet() {
   const [sessionsError, setSessionsError] = useState("");
   const [actionError, setActionError] = useState("");
   const [deletingQuizId, setDeletingQuizId] = useState(null);
+  const [deletingAttemptGroupKey, setDeletingAttemptGroupKey] = useState("");
+  const [deletingLiveGroupKey, setDeletingLiveGroupKey] = useState("");
+  const [showAllQuizzes, setShowAllQuizzes] = useState(false);
   const [collapsedAttemptGroupKeys, setCollapsedAttemptGroupKeys] = useState({});
   const [expandedLiveGroupKeys, setExpandedLiveGroupKeys] = useState({});
-  const [hiddenAttemptGroupKeys, setHiddenAttemptGroupKeys] = useState({});
-  const [hiddenLiveGroupKeys, setHiddenLiveGroupKeys] = useState({});
-  const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:4000";
+  const apiBaseUrl = getApiBaseUrl();
 
   useEffect(() => {
     const handleAuthUserUpdated = (event) => {
@@ -72,59 +76,13 @@ export default function OrganizerCabinet() {
     () => liveSessions.filter((session) => session.status === "finished").length,
     [liveSessions]
   );
-  const quizPerformance = useMemo(() => {
-    return quizzes
-      .map((quiz) => {
-        const quizAttempts = attempts.filter((attempt) => Number(attempt.quizId) === Number(quiz.id));
-        const quizSessions = liveSessions.filter((session) => Number(session.quizId) === Number(quiz.id));
-        const participantsCount = new Set(
-          quizAttempts.map((attempt) => Number(attempt.participantId))
-        ).size;
-        const averageQuizPercentage =
-          quizAttempts.length > 0
-            ? Math.round(
-                quizAttempts.reduce((sum, attempt) => sum + Number(attempt.percentage || 0), 0) /
-                  quizAttempts.length
-              )
-            : 0;
-        const bestAttempt = quizAttempts.reduce((best, attempt) => {
-          if (!best) {
-            return attempt;
-          }
-          return Number(attempt.percentage || 0) > Number(best.percentage || 0) ? attempt : best;
-        }, null);
-        const activityDates = [
-          ...quizAttempts.map((attempt) => attempt.createdAt),
-          ...quizSessions.map((session) => session.finishedAt || session.startedAt),
-        ]
-          .filter(Boolean)
-          .map((value) => new Date(value).getTime())
-          .filter((value) => Number.isFinite(value) && value > 0);
-        const lastActivityAt =
-          activityDates.length > 0 ? new Date(Math.max(...activityDates)).toISOString() : "";
-
-        return {
-          quizId: quiz.id,
-          title: quiz.title,
-          attemptsCount: quizAttempts.length,
-          participantsCount,
-          averageQuizPercentage,
-          liveSessionsCount: quizSessions.length,
-          bestScore: Number(bestAttempt?.score || 0),
-          bestMaxScore: Number(bestAttempt?.maxScore || 0),
-          lastActivityAt,
-        };
-      })
-      .sort((left, right) => {
-        if (right.attemptsCount !== left.attemptsCount) {
-          return right.attemptsCount - left.attemptsCount;
-        }
-        return String(left.title || "").localeCompare(String(right.title || ""), "ru");
-      });
-  }, [attempts, liveSessions, quizzes]);
   const quizzesById = useMemo(
     () => new Map(quizzes.map((quiz) => [Number(quiz.id), quiz])),
     [quizzes]
+  );
+  const visibleQuizzes = useMemo(
+    () => (showAllQuizzes ? quizzes : quizzes.slice(0, 1)),
+    [quizzes, showAllQuizzes]
   );
   const attemptGroups = useMemo(() => {
     const groups = new Map();
@@ -223,7 +181,7 @@ export default function OrganizerCabinet() {
         },
       });
     } catch (_error) {
-      throw new Error("Нет связи с API. Запустите сервер: npm run server");
+      throw new Error("Нет связи с API. Проверьте, что backend запущен и адрес сервера доступен.");
     }
 
     const data = await response.json().catch(() => ({}));
@@ -333,24 +291,84 @@ export default function OrganizerCabinet() {
       [groupKey]: !prev[groupKey],
     }));
   }, []);
-  const hideAttemptGroup = useCallback((groupKey) => {
-    setHiddenAttemptGroupKeys((prev) => ({
-      ...prev,
-      [groupKey]: true,
-    }));
-  }, []);
   const toggleLiveGroup = useCallback((groupKey) => {
     setExpandedLiveGroupKeys((prev) => ({
       ...prev,
       [groupKey]: !prev[groupKey],
     }));
   }, []);
-  const hideLiveGroup = useCallback((groupKey) => {
-    setHiddenLiveGroupKeys((prev) => ({
-      ...prev,
-      [groupKey]: true,
-    }));
-  }, []);
+
+  const handleDeleteAttemptGroup = useCallback(
+    async (group) => {
+      if (!Number.isInteger(group?.quizId) || group.quizId < 1) {
+        setActionError("Не удалось определить квиз для удаления попыток.");
+        return;
+      }
+
+      const quizTitle = String(group.quizTitle || "Без названия").trim() || "Без названия";
+      const isConfirmed = window.confirm(
+        `Удалить все попытки участников для квиза "${quizTitle}"? Это действие нельзя отменить.`
+      );
+      if (!isConfirmed) {
+        return;
+      }
+
+      try {
+        setActionError("");
+        setDeletingAttemptGroupKey(group.key);
+        await requestWithAuth(`${apiBaseUrl}/api/quizzes/${group.quizId}/attempts`, {
+          method: "DELETE",
+        });
+        setAttempts((prev) => prev.filter((attempt) => Number(attempt.quizId) !== Number(group.quizId)));
+        setCollapsedAttemptGroupKeys((prev) => {
+          const next = { ...prev };
+          delete next[group.key];
+          return next;
+        });
+      } catch (error) {
+        setActionError(error.message || "Не удалось удалить попытки.");
+      } finally {
+        setDeletingAttemptGroupKey("");
+      }
+    },
+    [apiBaseUrl, requestWithAuth]
+  );
+
+  const handleDeleteLiveGroup = useCallback(
+    async (group) => {
+      if (!Number.isInteger(group?.quizId) || group.quizId < 1) {
+        setActionError("Не удалось определить квиз для удаления live-сессий.");
+        return;
+      }
+
+      const quizTitle = String(group.quizTitle || "Без названия").trim() || "Без названия";
+      const isConfirmed = window.confirm(
+        `Удалить все live-сессии для квиза "${quizTitle}"? Это действие нельзя отменить.`
+      );
+      if (!isConfirmed) {
+        return;
+      }
+
+      try {
+        setActionError("");
+        setDeletingLiveGroupKey(group.key);
+        await requestWithAuth(`${apiBaseUrl}/api/quizzes/${group.quizId}/live-sessions`, {
+          method: "DELETE",
+        });
+        setLiveSessions((prev) => prev.filter((session) => Number(session.quizId) !== Number(group.quizId)));
+        setExpandedLiveGroupKeys((prev) => {
+          const next = { ...prev };
+          delete next[group.key];
+          return next;
+        });
+      } catch (error) {
+        setActionError(error.message || "Не удалось удалить live-сессии.");
+      } finally {
+        setDeletingLiveGroupKey("");
+      }
+    },
+    [apiBaseUrl, requestWithAuth]
+  );
 
   const handleLogout = () => {
     localStorage.removeItem("auth_token");
@@ -381,21 +399,32 @@ export default function OrganizerCabinet() {
           quizzesCount={quizzes.length}
           uniqueParticipantsCount={uniqueParticipantsCount}
           liveSessionsCount={liveSessions.length}
-          notes={ORGANIZER_NOTES}
-          onCreateQuiz={() => navigate("/organizer/quizzes/new")}
+          signals={ORGANIZER_SIGNALS}
         />
-
-        <FeatureDeckSection signals={ORGANIZER_SIGNALS} />
       </section>
 
       <section className={styles.blocks}>
         <div className={`${styles.sectionBlock} ${styles.sectionBlockTopOffset}`}>
           <section className={styles.card}>
             <div className={styles.sectionHeader}>
-              <h1 className={styles.title}>Мои квизы</h1>
+              <div className={styles.sectionHeaderTop}>
+                <h1 className={styles.title}>Мои квизы</h1>
+              </div>
               <p className={styles.sectionLead}>
                 Конструктор сценариев, параметры комнаты, лимиты попыток и быстрый переход к live-режиму находятся в одном списке.
               </p>
+              <div className={styles.sectionHeaderActions}>
+                <button
+                  type="button"
+                  className={`${styles.createQuizButton} ${styles.createActionButton}`}
+                  onClick={() => navigate("/organizer/quizzes/new")}
+                  aria-label="Создать квиз"
+                  title="Создать квиз"
+                >
+                  <PlusIcon className={styles.actionIconGlyph} />
+                  <span>Создать квиз</span>
+                </button>
+              </div>
             </div>
 
             {isLoading && (
@@ -415,7 +444,7 @@ export default function OrganizerCabinet() {
             )}
 
             <ul className={styles.quizList}>
-              {quizzes.map((quiz) => (
+              {visibleQuizzes.map((quiz) => (
                 <li key={quiz.id} className={styles.quizItem}>
                   <div className={styles.quizItemText}>
                     <span className={styles.quizItemLabel}>{quiz.title}</span>
@@ -440,30 +469,49 @@ export default function OrganizerCabinet() {
                     </span>
                     <button
                       type="button"
-                      className={styles.quizEditButton}
+                      className={`${styles.actionIconButton} ${styles.editIconButton}`}
                       onClick={() => navigate(`/organizer/quizzes/${quiz.id}/edit`)}
+                      aria-label="Редактировать квиз"
+                      title="Редактировать квиз"
                     >
-                      Редактировать
+                      <EditIcon className={styles.actionIconGlyph} />
                     </button>
                     <button
                       type="button"
-                      className={styles.quizLiveButton}
+                      className={`${styles.actionIconButton} ${styles.liveIconButton}`}
                       onClick={() => navigate(`/organizer/live/${quiz.id}`)}
+                      aria-label="Запустить live"
+                      title="Запустить live"
                     >
-                      Запустить live
+                      <LiveIcon className={styles.actionIconGlyph} />
                     </button>
                     <button
                       type="button"
-                      className={styles.quizDeleteButton}
+                      className={styles.deleteIconButton}
                       disabled={deletingQuizId === quiz.id}
                       onClick={() => handleDeleteQuiz(quiz)}
+                      aria-label={deletingQuizId === quiz.id ? "Удаление квиза..." : "Удалить квиз"}
+                      title="Удалить квиз"
                     >
-                      {deletingQuizId === quiz.id ? "Удаление..." : "Удалить"}
+                      <TrashIcon className={styles.deleteIconGlyph} />
                     </button>
                   </div>
                 </li>
               ))}
             </ul>
+
+            {!isLoading && !loadError && quizzes.length > 1 && (
+              <div className={`${styles.topActions} ${styles.quizListActions}`}>
+                <button
+                  type="button"
+                  className={styles.participantSecondaryButton}
+                  onClick={() => setShowAllQuizzes((prev) => !prev)}
+                  aria-expanded={showAllQuizzes}
+                >
+                  {showAllQuizzes ? "Свернуть список" : `Показать все квизы (${quizzes.length})`}
+                </button>
+              </div>
+            )}
           </section>
 
           <QuizAnalyticsSection
@@ -474,7 +522,6 @@ export default function OrganizerCabinet() {
             uniqueParticipantsCount={uniqueParticipantsCount}
             averagePercentage={averagePercentage}
             finishedLiveCount={finishedLiveCount}
-            quizPerformance={quizPerformance}
           />
         </div>
 
@@ -503,10 +550,8 @@ export default function OrganizerCabinet() {
 
             <ul className={styles.resultGroupList}>
               {attemptGroups.map((group) => {
-                if (hiddenAttemptGroupKeys[group.key]) {
-                  return null;
-                }
                 const isGroupExpanded = !collapsedAttemptGroupKeys[group.key];
+                const isDeleting = deletingAttemptGroupKey === group.key;
 
                 return (
                   <li key={group.key} className={styles.resultGroupItem}>
@@ -523,10 +568,13 @@ export default function OrganizerCabinet() {
                       <div className={styles.resultGroupHeaderActions}>
                         <button
                           type="button"
-                          className={styles.participantSecondaryButton}
-                          onClick={() => hideAttemptGroup(group.key)}
+                          className={styles.deleteIconButton}
+                          disabled={isDeleting}
+                          onClick={() => handleDeleteAttemptGroup(group)}
+                          aria-label={isDeleting ? "Удаление попыток..." : "Удалить попытки"}
+                          title="Удалить попытки"
                         >
-                          Скрыть
+                          <TrashIcon className={styles.deleteIconGlyph} />
                         </button>
                         <button
                           type="button"
@@ -627,10 +675,8 @@ export default function OrganizerCabinet() {
 
             <ul className={styles.resultGroupList}>
               {liveSessionGroups.map((group) => {
-                if (hiddenLiveGroupKeys[group.key]) {
-                  return null;
-                }
                 const isGroupExpanded = Boolean(expandedLiveGroupKeys[group.key]);
+                const isDeleting = deletingLiveGroupKey === group.key;
 
                 return (
                   <li key={group.key} className={styles.resultGroupItem}>
@@ -645,10 +691,13 @@ export default function OrganizerCabinet() {
                       <div className={styles.resultGroupHeaderActions}>
                         <button
                           type="button"
-                          className={styles.participantSecondaryButton}
-                          onClick={() => hideLiveGroup(group.key)}
+                          className={styles.deleteIconButton}
+                          disabled={isDeleting}
+                          onClick={() => handleDeleteLiveGroup(group)}
+                          aria-label={isDeleting ? "Удаление live-сессий..." : "Удалить live-сессии"}
+                          title="Удалить live-сессии"
                         >
-                          Скрыть
+                          <TrashIcon className={styles.deleteIconGlyph} />
                         </button>
                         <button
                           type="button"

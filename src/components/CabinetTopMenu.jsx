@@ -5,7 +5,6 @@ import { getStoredTheme, setThemePreference, THEMES, THEME_CHANGE_EVENT } from "
 
 const MENU_ITEMS = [
   { key: "profile", label: "Профиль", icon: "profile" },
-  { key: "progress", label: "Успеваемость", icon: "stats" },
   { key: "settings", label: "Настройки", icon: "settings" },
 ];
 
@@ -231,7 +230,7 @@ export default function CabinetTopMenu({
                     <button
                       type="button"
                       className={`${styles.menuItemButton} ${isActive ? styles.menuItemButtonActive : ""}`}
-                      onClick={item.key === "progress" ? undefined : () => handleMenuItemClick(item.key)}
+                      onClick={() => handleMenuItemClick(item.key)}
                       aria-pressed={item.key === "settings" ? isSettingsOpen : undefined}
                       aria-expanded={item.key === "settings" ? isSettingsOpen : undefined}
                       aria-controls={item.key === "settings" ? "settings-panel" : undefined}

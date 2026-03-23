@@ -54,8 +54,8 @@
   gap: 14px;
   padding: 8px 10px 8px 8px;
   border-radius: 16px;
-  border: 1px solid var(--line-strong);
-  background: var(--secondary-bg);
+  border: 1px solid var(--shell-bg);
+  background: var(--shell-bg);
 }
 
 .avatarUploadButton {
@@ -837,6 +837,19 @@
   margin-bottom: 18px;
 }
 
+.sectionHeaderTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sectionHeaderActions {
+  display: flex;
+  justify-content: flex-start;
+}
+
 .sessionSummaryGrid {
   margin-top: 20px;
   display: grid;
@@ -912,6 +925,13 @@
   font-weight: 800;
 }
 
+.archiveSectionTitle {
+  font-size: clamp(22px, 2.1vw, 30px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+}
+
 .text,
 .wsMeta,
 .wsHint,
@@ -941,6 +961,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.quizListActions {
+  margin-top: 12px;
 }
 
 .quizList,
@@ -1145,6 +1169,19 @@
   gap: 12px;
 }
 
+.resultHeadRowStack {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.resultFootRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
 .resultMain,
 .quizItemText {
   display: flex;
@@ -1233,6 +1270,10 @@
 
 .quizMetaWrap {
   margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 8px;
 }
 
 .quizStateBadge,
@@ -1313,19 +1354,94 @@
   border: 1px solid rgba(199, 74, 74, 0.2);
 }
 
+.deleteIconButton {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--danger);
+  background: var(--danger-soft);
+  border: 1px solid rgba(199, 74, 74, 0.2);
+  cursor: pointer;
+}
+
+.actionIconButton {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.editIconButton {
+  color: var(--text);
+  background: var(--shell-bg-soft);
+  border: 1px solid var(--line-strong);
+}
+
+.liveIconButton {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  box-shadow: 0 14px 26px rgba(37, 99, 235, 0.16);
+}
+
+.createActionIconButton {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  box-shadow: 0 14px 26px rgba(37, 99, 235, 0.16);
+}
+
+.createActionButton {
+  width: auto;
+  min-height: 44px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.deleteIconGlyph {
+  width: 16px;
+  height: 16px;
+}
+
+.actionIconGlyph {
+  width: 16px;
+  height: 16px;
+}
+
 .createQuizButton:hover,
 .quizJoinButton:hover,
 .quizLiveButton:hover,
 .formSubmitButton:hover,
 .participantSecondaryButton:hover,
 .quizEditButton:hover,
+.actionIconButton:hover,
 .quizDeleteButton:hover,
+.deleteIconButton:hover,
 .resultToggleButton:hover,
 .wsButton:hover,
 .linkButton:hover {
   transform: translateY(-1px);
 }
 
+.actionIconButton:disabled,
+.deleteIconButton:disabled,
 .quizDeleteButton:disabled,
 .formSubmitButton:disabled,
 .quizJoinButton:disabled,
@@ -1446,7 +1562,8 @@
 .joinQuizInput:focus,
 .wsInput:focus,
 .formInput:focus,
-.formTextarea:focus {
+.formTextarea:focus,
+.workspaceHeroCommandInput:focus {
   border-color: rgba(39, 84, 215, 0.3);
   box-shadow: 0 0 0 4px rgba(39, 84, 215, 0.08);
 }
@@ -1493,6 +1610,31 @@
 
 .attemptDetailCard {
   padding: 14px;
+}
+
+.attemptSupplement {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.attemptSupplementTitle {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+}
+
+.attemptLeaderboardList {
+  margin-top: 0;
+}
+
+.attemptLeaderboardItemActive {
+  border-color: rgba(37, 99, 235, 0.18);
+  background: rgba(37, 99, 235, 0.05);
 }
 
 .participantQuestionImage {
@@ -1691,8 +1833,19 @@
 .workspaceHero,
 .liveHeroPanel {
   display: grid;
+  gap: 16px;
+}
+
+.workspaceHero {
   grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr);
-  gap: 18px;
+}
+
+.workspaceHeroSingle {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.liveHeroPanel {
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
 }
 
 .workspaceHeroMain,
@@ -1737,6 +1890,88 @@
   box-shadow: var(--hero-shadow);
 }
 
+.workspaceHeroLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.workspaceHeroCopy {
+  min-width: 0;
+  max-width: 680px;
+}
+
+.participantWorkspaceHeroLayout {
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 360px);
+  align-items: end;
+  gap: 24px;
+}
+
+.participantWorkspaceHeroCopy {
+  max-width: none;
+}
+
+.participantWorkspaceTitle {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: none;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  text-wrap: unset;
+}
+
+.workspaceHeroCommandCard {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--hero-card-border);
+  border-radius: 18px;
+  background: var(--hero-card-bg);
+  box-shadow: none;
+}
+
+.workspaceHeroCommandHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.workspaceHeroCommandTitle {
+  margin: 0;
+  color: var(--hero-text);
+  font-family: var(--font-heading);
+  font-size: clamp(24px, 2.1vw, 32px);
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+.workspaceHeroCommandText {
+  margin: 0;
+  color: var(--hero-muted);
+  font-size: 15px;
+  line-height: 1.68;
+}
+
+.workspaceHeroCommandInput {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 16px;
+  border: 1px solid var(--hero-card-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--text);
+}
+
+.workspaceHeroCommandInput::placeholder {
+  color: var(--muted);
+}
+
+.participantWorkspaceHeroCommandCard {
+  align-self: end;
+  margin-bottom: 8px;
+}
+
 .workspaceHeroMain::before,
 .liveHeroPanel::before {
   content: "";
@@ -1777,6 +2012,13 @@
   text-shadow: var(--hero-title-shadow);
 }
 
+.workspaceTitle.participantWorkspaceTitle {
+  max-width: none;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  text-wrap: unset;
+}
+
 .workspaceLead {
   margin: 18px 0 0;
   max-width: 50ch;
@@ -1812,6 +2054,39 @@
 .liveSidebar {
   display: grid;
   gap: 14px;
+}
+
+.workspaceHeroSignalGrid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-content: start;
+}
+
+.workspaceHeroSignalCard {
+  padding: 18px;
+  border: 1px solid var(--hero-card-border);
+  border-radius: 18px;
+  background: var(--hero-card-bg);
+  box-shadow: none;
+}
+
+.workspaceHeroSignalTitle {
+  margin: 0;
+  color: var(--hero-text);
+  font-family: var(--font-heading);
+  font-size: clamp(22px, 2vw, 30px);
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+.workspaceHeroSignalText {
+  margin: 12px 0 0;
+  color: var(--hero-muted);
+  font-size: 15px;
+  line-height: 1.68;
 }
 
 .liveActionStack {
@@ -2025,6 +2300,10 @@
   gap: 16px;
 }
 
+.archiveColumnsSingle {
+  grid-template-columns: 1fr;
+}
+
 .archiveLane {
   padding: 20px;
   border-radius: 18px;
@@ -2061,15 +2340,21 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-width: 420px;
 }
 
 .liveMetricGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
+  align-items: stretch;
 }
 
 .liveMetricCard {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   padding: 18px;
   border-radius: 16px;
   border-color: var(--hero-card-border);
@@ -2088,33 +2373,61 @@
 }
 
 .liveMetricValue {
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   color: var(--hero-text);
   font-family: var(--font-heading);
-  font-size: clamp(24px, 2.8vw, 34px);
+  font-size: clamp(18px, 1.8vw, 28px);
   font-weight: 800;
-  line-height: 0.96;
+  line-height: 1.02;
   letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .liveWorkspaceGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.22fr) minmax(280px, 0.78fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
 }
 
 .liveStageCard {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  align-items: start;
   gap: 18px;
+}
+
+.liveStageCardSingle {
+  grid-template-columns: 1fr;
+}
+
+.liveStageControlPanel {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0;
+  border-top: none;
+}
+
+.liveStageMetaCard {
+  width: min(100%, 320px);
+  display: grid;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--shell-bg-soft);
+}
+
+.liveStageMetaList {
+  display: grid;
+  gap: 6px;
 }
 
 .liveStatePanel {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 320px;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .liveQuestionForm,
@@ -2122,6 +2435,38 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.liveResultLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  align-items: start;
+  gap: 18px;
+}
+
+.liveResultMain,
+.liveResultAside {
+  min-width: 0;
+}
+
+.liveResultAside {
+  display: grid;
+  gap: 12px;
+}
+
+.liveResultMetaCard {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--shell-bg-soft);
+}
+
+.liveSidebarTimerCard {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
 }
 
 .liveQuestionHeader {
@@ -2186,6 +2531,13 @@
   color: var(--hero-muted);
 }
 
+.liveMetricText {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-size: 14px;
+  line-height: 1.52;
+}
+
 .liveSidebarCard {
   background: var(--shell-bg-soft);
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(91, 140, 255, 0.06);
@@ -2197,6 +2549,7 @@
   .showcaseGrid,
   .sectionBlock,
   .workspaceHero,
+  .workspaceHeroLayout,
   .liveHeroPanel,
   .featureDeck,
   .archiveColumns,
@@ -2204,16 +2557,25 @@
     grid-template-columns: 1fr;
   }
 
-  .archiveHeader,
-  .liveMetricGrid {
+  .archiveHeader {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .participantWorkspaceHeroCommandCard {
+    align-self: stretch;
+    margin-bottom: 0;
+  }
+
+  .participantWorkspaceTitle {
+    max-width: none;
   }
 }
 
 @media (max-width: 900px) {
   .headerWeb {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
   }
 
   .showcaseCard,
@@ -2234,13 +2596,14 @@
   }
 
   .topbarActions {
-    width: 100%;
-    margin-left: 0;
+    width: auto;
+    margin-left: auto;
+    flex-shrink: 0;
   }
 
   .profileTrigger {
-    width: 100%;
-    justify-content: space-between;
+    width: auto;
+    justify-content: flex-start;
   }
 
   .profileUser {
@@ -2275,7 +2638,8 @@
   }
 
   .archiveStatsRow {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(8px, 2vw, 12px);
   }
 
   .workspaceTitle {
@@ -2288,6 +2652,22 @@
 
   .liveTimerWrap {
     align-items: flex-start;
+  }
+
+  .liveStageCard {
+    grid-template-columns: 1fr;
+  }
+
+  .liveResultLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .liveStageControlPanel {
+    justify-content: flex-start;
+  }
+
+  .liveStageMetaCard {
+    width: 100%;
   }
 }
 
@@ -2305,9 +2685,210 @@
     padding: 18px;
   }
 
-  .statsGrid,
+  .logo {
+    font-size: clamp(22px, 6.8vw, 30px);
+  }
+
+  .statsGrid {
+    --mobile-stat-gap: clamp(8px, 2.8vw, 12px);
+    --mobile-stat-card-width: clamp(88px, 39vw, 154px);
+    width: min(
+      100%,
+      calc(var(--mobile-stat-card-width) * 2 + var(--mobile-stat-gap))
+    );
+    margin-inline: auto;
+    grid-template-columns: repeat(2, minmax(0, var(--mobile-stat-card-width)));
+    gap: var(--mobile-stat-gap);
+    justify-content: center;
+    justify-items: stretch;
+  }
+
   .formRow {
     grid-template-columns: 1fr;
+  }
+
+  .statCard {
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+    justify-self: stretch;
+    gap: clamp(8px, 2.5vw, 10px);
+    padding: clamp(12px, 3.2vw, 18px) clamp(12px, 4vw, 22px);
+  }
+
+  .brandTag,
+  .panelFieldCaption,
+  .showcaseEyebrow,
+  .sectionEyebrow,
+  .metricLabel,
+  .metaPill,
+  .archiveLaneEyebrow,
+  .liveStateEyebrow,
+  .liveSidebarLabel,
+  .workspacePill,
+  .archiveStatLabel,
+  .liveMetricLabel,
+  .statLabel,
+  .commandButton,
+  .participantSecondaryButton,
+  .formSubmitButton,
+  .quizDeleteButton,
+  .quizJoinButton,
+  .quizLiveButton,
+  .createQuizButton,
+  .wsButton {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+
+  .profileUser,
+  .themeHint,
+  .profilePanelHint,
+  .profileMediaHint,
+  .profileFormHint,
+  .showcaseLead,
+  .sectionLead,
+  .showcaseFeatureText,
+  .metricMeta,
+  .text,
+  .wsMeta,
+  .wsHint,
+  .liveSessionMeta,
+  .quizParam,
+  .resultScore,
+  .metaCopy,
+  .workspaceLead,
+  .commandText,
+  .featureDeckText,
+  .archiveLaneText,
+  .liveStateText,
+  .liveSidebarText,
+  .liveMetricText,
+  .liveHelperText,
+  .utilityNoteText,
+  .attemptAnswerMeta,
+  .formError,
+  .formSuccess {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .showcaseTitle,
+  .workspaceTitle {
+    font-size: clamp(30px, 9vw, 40px);
+  }
+
+  .title,
+  .profilePageTitle,
+  .profileFormTitle,
+  .sectionSubtitle {
+    font-size: clamp(24px, 7.2vw, 32px);
+    line-height: 0.98;
+  }
+
+  .archiveSectionTitle {
+    font-size: clamp(18px, 5.6vw, 24px);
+    line-height: 1.04;
+  }
+
+  .profileMediaTitle,
+  .commandTitle,
+  .featureDeckTitle,
+  .liveStageTitle,
+  .liveSessionTitle,
+  .wsTitle,
+  .attemptAnswerTitle,
+  .attemptSupplementTitle,
+  .utilityNoteLabel,
+  .profileName {
+    font-size: clamp(18px, 5.6vw, 24px);
+    line-height: 1.04;
+  }
+
+  .showcaseFeatureTitle {
+    font-size: 17px;
+    line-height: 1.22;
+  }
+
+  .archiveStatValue,
+  .liveSidebarValue,
+  .liveMetricValue,
+  .metricValue,
+  .statValue {
+    font-size: clamp(22px, 7vw, 30px);
+  }
+
+  .showcaseTitle,
+  .workspaceTitle,
+  .title,
+  .profilePageTitle,
+  .profileFormTitle,
+  .sectionSubtitle,
+  .quizItemLabel,
+  .liveSessionTitle,
+  .resultGroupTitle,
+  .resultName,
+  .commandTitle,
+  .featureDeckTitle,
+  .liveStageTitle {
+    overflow-wrap: anywhere;
+  }
+
+  .quizItemLabel {
+    font-size: clamp(18px, 5.8vw, 24px);
+    line-height: 1.02;
+  }
+
+  .quizCode,
+  .quizParam {
+    font-size: clamp(9px, 2.3vw, 11px);
+    line-height: 1.45;
+  }
+
+  .quizMetaWrap {
+    margin-top: 12px;
+    gap: clamp(5px, 1.6vw, 8px) clamp(4px, 1.2vw, 6px);
+  }
+
+  .quizStateBadge {
+    min-height: clamp(24px, 6.4vw, 30px);
+    padding-inline: clamp(7px, 2.4vw, 10px);
+    border-radius: clamp(8px, 2vw, 10px);
+    font-size: clamp(8px, 2vw, 10px);
+  }
+
+  .quizEditButton,
+  .quizLiveButton,
+  .quizDeleteButton {
+    min-height: clamp(32px, 8.2vw, 38px);
+    padding-inline: clamp(8px, 2.6vw, 12px);
+    border-radius: clamp(10px, 2.4vw, 12px);
+    font-size: clamp(8px, 2vw, 10px);
+    letter-spacing: clamp(0.06em, 0.1vw, 0.1em);
+  }
+
+  .deleteIconButton {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  .actionIconButton {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  .deleteIconGlyph {
+    width: 14px;
+    height: 14px;
+  }
+
+  .actionIconGlyph {
+    width: 14px;
+    height: 14px;
   }
 
   .showcaseFeatureCard {
@@ -2315,7 +2896,7 @@
   }
 
   .showcaseLead {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .showcaseAside {
@@ -2337,9 +2918,59 @@
     padding: 18px;
   }
 
-  .liveMetricGrid,
+  .quizItem,
+  .liveSessionItem,
+  .resultGroupHeader,
+  .resultGroupAttempts,
+  .archiveLane {
+    padding: 16px;
+  }
+
   .archiveHeader {
     grid-template-columns: 1fr;
+  }
+
+  .archiveStatsRow {
+    gap: clamp(8px, 2.4vw, 10px);
+  }
+
+  .archiveStatCard {
+    min-width: 0;
+    padding: clamp(12px, 3vw, 16px) clamp(8px, 2.4vw, 12px);
+    border-radius: 14px;
+  }
+
+  .archiveStatLabel {
+    font-size: clamp(7px, 2vw, 9px);
+    line-height: 1.35;
+    letter-spacing: clamp(0.08em, 0.18vw, 0.12em);
+    white-space: normal;
+    text-wrap: balance;
+  }
+
+  .archiveStatValue {
+    margin-top: clamp(8px, 2vw, 10px);
+    font-size: clamp(18px, 6vw, 24px);
+    line-height: 0.98;
+  }
+
+  .liveMetricGrid {
+    gap: 8px;
+  }
+
+  .liveMetricCard {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .liveMetricValue {
+    font-size: clamp(15px, 3.2vw, 20px);
+    line-height: 1.06;
+  }
+
+  .liveMetricText {
+    font-size: 12px;
+    line-height: 1.4;
   }
 
   .joinQuizRow,
@@ -2364,6 +2995,40 @@
     flex-direction: column;
   }
 
+  .liveQuestionHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .joinQuizInput,
+  .wsInput,
+  .formInput,
+  .formTextarea,
+  .commandInput,
+  .workspaceHeroCommandInput,
+  .panelInput {
+    font-size: 16px;
+    min-height: 48px;
+  }
+
+  .formTextarea {
+    min-height: 100px;
+  }
+
+  .quizTimer,
+  .liveWsStatus,
+  .resultGroupToggleLabel {
+    font-size: 10px;
+  }
+
+  .resultGroupCount,
+  .resultGroupChevron {
+    min-width: 32px;
+    min-height: 32px;
+    width: 32px;
+    height: 32px;
+  }
+
   .resultAside {
     width: 100%;
     justify-content: flex-start;
@@ -2374,8 +3039,202 @@
     justify-content: flex-start;
   }
 
+  .archiveSection .resultGroupButton {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 10px;
+  }
+
+  .archiveSection .resultGroupMain {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .archiveSection .resultGroupInfo {
+    min-width: 0;
+  }
+
+  .archiveSection .resultGroupAside {
+    width: auto;
+    flex: 0 0 auto;
+    margin-left: auto;
+    gap: 6px;
+    justify-content: flex-end;
+    align-self: center;
+  }
+
+  .archiveSection .resultGroupTitle {
+    font-size: clamp(13px, 4vw, 16px);
+    line-height: 1.08;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .archiveSection .resultGroupMeta {
+    margin-top: 4px;
+    font-size: clamp(10px, 3.3vw, 12px);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .archiveSection .resultAvatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .archiveSection .deleteIconButton {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    min-height: 30px;
+  }
+
+  .archiveSection .resultGroupChevron {
+    min-width: 30px;
+    min-height: 30px;
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+  }
+
+  .archiveSection .resultItemStack {
+    padding: 12px 14px;
+  }
+
+  .archiveSection .resultHeadRow {
+    gap: 10px;
+  }
+
+  .archiveSection .resultFootRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .archiveSection .resultName {
+    font-size: clamp(12px, 3.7vw, 15px);
+    line-height: 1.08;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .archiveSection .resultScore {
+    margin-top: 0;
+    font-size: clamp(10px, 3.2vw, 12px);
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+
+  .archiveSection .resultAside {
+    width: 100%;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .archiveSection .resultBadge {
+    min-height: 26px;
+    padding-inline: 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  .archiveSection .resultToggleButton {
+    min-height: 34px;
+    padding-inline: 10px;
+    border-radius: 12px;
+    font-size: 8px;
+    letter-spacing: 0.07em;
+    white-space: nowrap;
+  }
+
+  .resultGroupHeader {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .resultGroupHeaderActions {
+    justify-self: end;
+    gap: clamp(6px, 2vw, 10px);
+    flex-wrap: nowrap;
+  }
+
+  .resultGroupHeader .resultGroupInfo {
+    min-width: 0;
+  }
+
+  .resultGroupHeader .resultGroupTitle {
+    font-size: clamp(16px, 4.8vw, 20px);
+    line-height: 1.04;
+    overflow-wrap: anywhere;
+  }
+
+  .resultGroupHeader .resultGroupMeta {
+    margin-top: 6px;
+    font-size: clamp(12px, 3.6vw, 14px);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .resultGroupHeader .deleteIconButton {
+    width: clamp(30px, 8vw, 34px);
+    height: clamp(30px, 8vw, 34px);
+    min-width: clamp(30px, 8vw, 34px);
+    min-height: clamp(30px, 8vw, 34px);
+  }
+
+  .resultGroupHeader .resultGroupChevron {
+    min-width: clamp(30px, 8vw, 34px);
+    min-height: clamp(30px, 8vw, 34px);
+    width: clamp(30px, 8vw, 34px);
+    height: clamp(30px, 8vw, 34px);
+    font-size: clamp(12px, 3vw, 15px);
+  }
+
   .profileSummary {
     display: none;
+  }
+
+  .profileTrigger {
+    gap: 6px;
+    padding: 5px 7px 5px 5px;
+    border-radius: 13px;
+    border: 0;
+    background: transparent;
+  }
+
+  .avatarBadge {
+    width: 40px;
+    height: 40px;
+  }
+
+  .avatarIcon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .profileChevron {
+    width: 16px;
+    height: 16px;
+  }
+
+  .profileName {
+    margin-bottom: 10px;
   }
 
   .workspacePillRow,
@@ -2383,11 +3242,42 @@
     width: 100%;
   }
 
+  .workspacePillRow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(6px, 2vw, 10px);
+  }
+
+  .workspacePill {
+    justify-content: center;
+    min-width: 0;
+    min-height: clamp(30px, 8vw, 38px);
+    padding-inline: clamp(8px, 2.5vw, 14px);
+    font-size: clamp(7px, 1.9vw, 11px);
+    letter-spacing: clamp(0.04em, 0.12vw, 0.12em);
+    white-space: nowrap;
+  }
+
+  .workspacePillWide {
+    grid-column: 1 / -1;
+    padding-inline: clamp(12px, 3vw, 16px);
+    font-size: clamp(8px, 2.3vw, 10px);
+    letter-spacing: clamp(0.02em, 0.08vw, 0.08em);
+  }
+
   .commandButton,
   .liveActionStack > button,
   .liveSidebar > button,
   .participantQuizActions > button {
     width: 100%;
+  }
+
+  .heroCommandButton {
+    width: fit-content;
+    max-width: 100%;
+    min-height: 44px;
+    padding-inline: clamp(16px, 5vw, 22px);
+    font-size: clamp(9px, 2.2vw, 11px);
   }
 
   .liveToolbar {
@@ -2401,5 +3291,28 @@
   .liveAnswerCard {
     align-items: flex-start;
     padding-block: 14px;
+  }
+}
+
+@media (max-width: 520px) {
+  .archiveStatsRow {
+    gap: 8px;
+  }
+
+  .archiveStatCard {
+    padding: 10px 8px;
+  }
+
+  .archiveStatLabel {
+    font-size: 7px;
+    letter-spacing: 0.08em;
+  }
+
+  .archiveStatValue {
+    font-size: clamp(16px, 5.6vw, 20px);
+  }
+
+  .liveMetricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

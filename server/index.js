@@ -99,8 +99,28 @@ const app = express();
 const server = http.createServer(app);
 const uploadsRootDir = path.join(__dirname, "uploads");
 const questionUploadsDir = path.join(uploadsRootDir, "questions");
+const clientBuildDir = path.join(__dirname, "..", "build");
+const clientBuildIndex = path.join(clientBuildDir, "index.html");
 
 app.disable("x-powered-by");
+
+function sendClientBuildUnavailable(res) {
+  return res
+    .status(503)
+    .type("html")
+    .send(`<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quiz App</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; padding: 24px;">
+    <h1 style="margin: 0 0 12px;">Приложение временно обновляется</h1>
+    <p style="margin: 0;">Сборка фронтенда еще не завершена. Обновите страницу через несколько секунд.</p>
+  </body>
+</html>`);
+}
 
 function applySecurityHeaders(_req, res, next) {
   res.setHeader("X-Content-Type-Options", "nosniff");
@@ -260,6 +280,22 @@ function isAllowedOrigin(origin) {
   return allowedOrigins.includes(origin);
 }
 
+function isSameServerOrigin(origin, requestHost) {
+  const normalizedOrigin = String(origin || "").trim();
+  const normalizedRequestHost = String(requestHost || "").trim().toLowerCase();
+
+  if (!normalizedOrigin || !normalizedRequestHost) {
+    return false;
+  }
+
+  try {
+    const parsedOrigin = new URL(normalizedOrigin);
+    return parsedOrigin.host.toLowerCase() === normalizedRequestHost;
+  } catch (_error) {
+    return false;
+  }
+}
+
 const wss = new WebSocketServer({
   server,
   path: wsPath,
@@ -267,7 +303,8 @@ const wss = new WebSocketServer({
 
 wss.on("connection", (ws, request) => {
   const origin = request.headers.origin;
-  if (!isAllowedOrigin(origin)) {
+  const requestHost = request.headers.host;
+  if (!isAllowedOrigin(origin) && !isSameServerOrigin(origin, requestHost)) {
     ws.close(1008, "Origin is not allowed.");
     return;
   }
@@ -776,9 +813,8 @@ app.post(
     }
 
     const publicPath = `/uploads/questions/${req.file.filename}`;
-    const imageUrl = `${req.protocol}://${req.get("host")}${publicPath}`;
     return res.status(201).json({
-      imageUrl,
+      imageUrl: publicPath,
       fileName: req.file.filename,
       originalName: req.file.originalname,
     });
@@ -1686,6 +1722,37 @@ app.get("/api/attempts/mine", authenticate, requireRole("participant"), async (r
   }
 });
 
+app.delete("/api/attempts/mine/:quizId", authenticate, requireRole("participant"), async (req, res) => {
+  try {
+    const quizId = Number(req.params?.quizId);
+    if (!Number.isInteger(quizId) || quizId < 1) {
+      return res.status(400).json({ message: "Некорректный id квиза." });
+    }
+
+    const deleteResult = await pool.query(
+      `
+      DELETE FROM quiz_attempts
+      WHERE quiz_id = $1 AND participant_id = $2
+      RETURNING id;
+      `,
+      [quizId, req.auth.sub]
+    );
+
+    if (deleteResult.rows.length === 0) {
+      return res.status(404).json({ message: "Попытки по этому квизу не найдены." });
+    }
+
+    return res.json({
+      deleted: true,
+      quizId,
+      deletedCount: deleteResult.rowCount || 0,
+    });
+  } catch (error) {
+    console.error("DELETE /api/attempts/mine/:quizId failed:", error);
+    return res.status(500).json({ message: "Внутренняя ошибка сервера." });
+  }
+});
+
 app.get("/api/quizzes/mine/attempts", authenticate, requireRole("organizer"), async (req, res) => {
   try {
     const rawLimit = Number(req.query?.limit);
@@ -1809,6 +1876,86 @@ app.get("/api/live-sessions/mine", authenticate, requireRole("organizer"), async
     });
   } catch (error) {
     console.error("GET /api/live-sessions/mine failed:", error);
+    return res.status(500).json({ message: "Внутренняя ошибка сервера." });
+  }
+});
+
+app.delete("/api/quizzes/:quizId/attempts", authenticate, requireRole("organizer"), async (req, res) => {
+  try {
+    const quizId = Number(req.params?.quizId);
+    if (!Number.isInteger(quizId) || quizId < 1) {
+      return res.status(400).json({ message: "Некорректный id квиза." });
+    }
+
+    const ownershipResult = await pool.query(
+      `
+      SELECT id
+      FROM quizzes
+      WHERE id = $1 AND organizer_id = $2
+      LIMIT 1;
+      `,
+      [quizId, req.auth.sub]
+    );
+    if (ownershipResult.rows.length === 0) {
+      return res.status(404).json({ message: "Квиз не найден." });
+    }
+
+    const deleteResult = await pool.query(
+      `
+      DELETE FROM quiz_attempts
+      WHERE quiz_id = $1
+      RETURNING id;
+      `,
+      [quizId]
+    );
+
+    return res.json({
+      deleted: true,
+      quizId,
+      deletedCount: deleteResult.rowCount || 0,
+    });
+  } catch (error) {
+    console.error("DELETE /api/quizzes/:quizId/attempts failed:", error);
+    return res.status(500).json({ message: "Внутренняя ошибка сервера." });
+  }
+});
+
+app.delete("/api/quizzes/:quizId/live-sessions", authenticate, requireRole("organizer"), async (req, res) => {
+  try {
+    const quizId = Number(req.params?.quizId);
+    if (!Number.isInteger(quizId) || quizId < 1) {
+      return res.status(400).json({ message: "Некорректный id квиза." });
+    }
+
+    const ownershipResult = await pool.query(
+      `
+      SELECT id
+      FROM quizzes
+      WHERE id = $1 AND organizer_id = $2
+      LIMIT 1;
+      `,
+      [quizId, req.auth.sub]
+    );
+    if (ownershipResult.rows.length === 0) {
+      return res.status(404).json({ message: "Квиз не найден." });
+    }
+
+    const deleteResult = await pool.query(
+      `
+      DELETE FROM quiz_sessions
+      WHERE quiz_id = $1 AND organizer_id = $2
+      RETURNING id;
+      `,
+      [quizId, req.auth.sub]
+    );
+
+    return res.json({
+      deleted: true,
+      quizId,
+      deletedCount: deleteResult.rowCount || 0,
+    });
+  } catch (error) {
+    console.error("DELETE /api/quizzes/:quizId/live-sessions failed:", error);
     return res.status(500).json({ message: "Внутренняя ошибка сервера." });
   }
 });
@@ -2165,6 +2312,33 @@ app.post("/api/quizzes", authenticate, requireRole("organizer"), async (req, res
     console.error("POST /api/quizzes failed:", error);
     return res.status(500).json({ message: "Внутренняя ошибка сервера." });
   }
+});
+
+if (fs.existsSync(clientBuildIndex)) {
+  app.use(express.static(clientBuildDir));
+}
+
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
+    next();
+    return;
+  }
+
+  if (!fs.existsSync(clientBuildIndex)) {
+    sendClientBuildUnavailable(res);
+    return;
+  }
+
+  res.sendFile(clientBuildIndex, (error) => {
+    if (!error) {
+      return;
+    }
+    if (error.code === "ENOENT" && !res.headersSent) {
+      sendClientBuildUnavailable(res);
+      return;
+    }
+    next(error);
+  });
 });
 
 async function start() {

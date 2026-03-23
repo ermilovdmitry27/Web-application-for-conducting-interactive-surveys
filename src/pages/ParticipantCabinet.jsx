@@ -3,14 +3,12 @@ import { useNavigate } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
 import AsyncStateNotice from "../components/AsyncStateNotice";
 import CabinetTopMenu from "../components/CabinetTopMenu";
+import TrashIcon from "../components/TrashIcon";
 import { getApiBaseUrl } from "../lib/api/config";
 import { requestWithAuth as sharedRequestWithAuth } from "../lib/api/requestWithAuth";
-import FeatureDeckSection from "./participant-cabinet/FeatureDeckSection";
 import WorkspaceHeroSection from "./participant-cabinet/WorkspaceHeroSection";
 import {
   AUTH_USER_UPDATED_EVENT,
-  PARTICIPANT_SIGNALS,
-  SHOWCASE_NOTES,
 } from "./participant-cabinet/constants";
 import {
   formatAttemptDate,
@@ -35,8 +33,13 @@ export default function ParticipantCabinet() {
   const [attempts, setAttempts] = useState([]);
   const [isAttemptsLoading, setIsAttemptsLoading] = useState(true);
   const [attemptsError, setAttemptsError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deletingGroupKey, setDeletingGroupKey] = useState("");
   const [expandedAttemptIds, setExpandedAttemptIds] = useState({});
   const [expandedQuizGroupIds, setExpandedQuizGroupIds] = useState({});
+  const [liveLeaderboardsBySessionId, setLiveLeaderboardsBySessionId] = useState({});
+  const [liveLeaderboardLoadingBySessionId, setLiveLeaderboardLoadingBySessionId] = useState({});
+  const [liveLeaderboardErrorsBySessionId, setLiveLeaderboardErrorsBySessionId] = useState({});
 
   useEffect(() => {
     const handleAuthUserUpdated = (event) => {
@@ -64,6 +67,7 @@ export default function ParticipantCabinet() {
     try {
       setIsAttemptsLoading(true);
       setAttemptsError("");
+      setDeleteError("");
       const data = await requestWithAuth(`${apiBaseUrl}/api/attempts/mine`, { method: "GET" });
       setAttempts(Array.isArray(data.attempts) ? data.attempts : []);
     } catch (error) {
@@ -106,6 +110,7 @@ export default function ParticipantCabinet() {
     () => attempts.filter((attempt) => !attempt.isLive),
     [attempts]
   );
+  const hasClassicAttempts = classicAttempts.length > 0;
 
   const handleJoinQuiz = (event) => {
     event.preventDefault();
@@ -124,11 +129,59 @@ export default function ParticipantCabinet() {
     navigate("/login", { replace: true });
   };
 
-  const toggleAttemptExpanded = (attemptId) => {
+  const loadLiveLeaderboard = useCallback(async (sessionId) => {
+    if (!Number.isInteger(sessionId) || sessionId < 1) {
+      return;
+    }
+
+    try {
+      setLiveLeaderboardLoadingBySessionId((prev) => ({
+        ...prev,
+        [sessionId]: true,
+      }));
+      setLiveLeaderboardErrorsBySessionId((prev) => ({
+        ...prev,
+        [sessionId]: "",
+      }));
+
+      const data = await requestWithAuth(`${apiBaseUrl}/api/live-sessions/${sessionId}/leaderboard`, {
+        method: "GET",
+      });
+      setLiveLeaderboardsBySessionId((prev) => ({
+        ...prev,
+        [sessionId]: data?.leaderboard || null,
+      }));
+    } catch (error) {
+      setLiveLeaderboardErrorsBySessionId((prev) => ({
+        ...prev,
+        [sessionId]: error.message || "Не удалось загрузить итоговый рейтинг.",
+      }));
+    } finally {
+      setLiveLeaderboardLoadingBySessionId((prev) => ({
+        ...prev,
+        [sessionId]: false,
+      }));
+    }
+  }, [apiBaseUrl, requestWithAuth]);
+
+  const toggleAttemptExpanded = (attempt) => {
+    const attemptId = Number(attempt?.id);
+    const liveSessionId = Number(attempt?.liveSessionId);
+    const shouldRequestLeaderboard =
+      Boolean(attempt?.isLive) &&
+      Number.isInteger(liveSessionId) &&
+      liveSessionId > 0 &&
+      !liveLeaderboardsBySessionId[liveSessionId] &&
+      !liveLeaderboardLoadingBySessionId[liveSessionId];
+
     setExpandedAttemptIds((prev) => ({
       ...prev,
       [attemptId]: !prev[attemptId],
     }));
+
+    if (shouldRequestLeaderboard) {
+      loadLiveLeaderboard(liveSessionId);
+    }
   };
 
   const toggleQuizGroupExpanded = (groupId) => {
@@ -138,40 +191,84 @@ export default function ParticipantCabinet() {
     }));
   };
 
+  const handleDeleteGroup = async (group) => {
+    if (!Number.isInteger(group?.quizId) || group.quizId < 1) {
+      setDeleteError("Не удалось определить квиз для удаления попыток.");
+      return;
+    }
+
+    const quizTitle = String(group.title || "Квиз").trim() || "Квиз";
+    const isConfirmed = window.confirm(
+      `Удалить все ваши попытки по квизу "${quizTitle}"? Это действие нельзя отменить.`
+    );
+    if (!isConfirmed) {
+      return;
+    }
+
+    try {
+      setDeleteError("");
+      setDeletingGroupKey(group.key);
+      await requestWithAuth(`${apiBaseUrl}/api/attempts/mine/${group.quizId}`, {
+        method: "DELETE",
+      });
+      setAttempts((prev) => prev.filter((attempt) => Number(attempt.quizId) !== Number(group.quizId)));
+      setExpandedQuizGroupIds((prev) => {
+        const next = { ...prev };
+        delete next[group.key];
+        return next;
+      });
+    } catch (error) {
+      setDeleteError(error.message || "Не удалось удалить попытки.");
+    } finally {
+      setDeletingGroupKey("");
+    }
+  };
+
   const renderAttemptItem = (attempt, attemptIndex) => {
     const attemptLabel = attempt.createdAt
       ? `Попытка • ${formatAttemptDate(attempt.createdAt)}`
       : `Попытка ${attemptIndex + 1}`;
     const isExpanded = Boolean(expandedAttemptIds[attempt.id]);
     const answers = Array.isArray(attempt.answers) ? attempt.answers : [];
+    const liveSessionId = Number(attempt?.liveSessionId);
+    const hasLiveLeaderboard = Boolean(attempt?.isLive) && Number.isInteger(liveSessionId) && liveSessionId > 0;
+    const liveLeaderboard = hasLiveLeaderboard ? liveLeaderboardsBySessionId[liveSessionId] || null : null;
+    const liveLeaderboardError =
+      hasLiveLeaderboard ? liveLeaderboardErrorsBySessionId[liveSessionId] || "" : "";
+    const isLiveLeaderboardLoading = hasLiveLeaderboard
+      ? Boolean(liveLeaderboardLoadingBySessionId[liveSessionId])
+      : false;
+    const myParticipantId = Number(user?.id);
+    const myLeaderboardEntry =
+      liveLeaderboard && Array.isArray(liveLeaderboard.entries)
+        ? liveLeaderboard.entries.find((entry) => Number(entry.participantId) === myParticipantId) || null
+        : null;
 
     return (
       <li key={attempt.id} className={`${styles.resultItem} ${styles.resultItemStack}`}>
-        <div className={styles.resultHeadRow}>
-          <div className={styles.resultMain}>
-            <div className={styles.resultInfo}>
-              <p className={styles.resultName}>{attemptLabel}</p>
-              <p className={styles.resultScore}>
-                {attempt.isLive ? "Live • " : ""}
-                {attempt.score}/{attempt.maxScore} баллов
-                {Number.isInteger(attempt.answeredQuestionsCount)
-                  ? ` • Ответов: ${attempt.answeredQuestionsCount}/${attempt.maxScore}`
-                  : ""}
-                {attempt.timeSpentSeconds > 0 ? ` • ${formatDurationSeconds(attempt.timeSpentSeconds)}` : ""}
-              </p>
+        <div className={`${styles.resultHeadRow} ${styles.resultHeadRowStack}`}>
+          <p className={styles.resultName}>{attemptLabel}</p>
+          <div className={styles.resultFootRow}>
+            <p className={styles.resultScore}>
+              {attempt.isLive ? "Live • " : ""}
+              {attempt.score}/{attempt.maxScore} баллов
+              {Number.isInteger(attempt.answeredQuestionsCount)
+                ? ` • Ответов: ${attempt.answeredQuestionsCount}/${attempt.maxScore}`
+                : ""}
+              {attempt.timeSpentSeconds > 0 ? ` • ${formatDurationSeconds(attempt.timeSpentSeconds)}` : ""}
+            </p>
+            <div className={styles.resultAside}>
+              <span className={`${styles.resultBadge} ${getResultBadgeClass(attempt.percentage)}`}>
+                {attempt.percentage}%
+              </span>
+              <button
+                type="button"
+                className={styles.resultToggleButton}
+                onClick={() => toggleAttemptExpanded(attempt)}
+              >
+                {isExpanded ? "Скрыть" : "Подробнее"}
+              </button>
             </div>
-          </div>
-          <div className={styles.resultAside}>
-            <span className={`${styles.resultBadge} ${getResultBadgeClass(attempt.percentage)}`}>
-              {attempt.percentage}%
-            </span>
-            <button
-              type="button"
-              className={styles.resultToggleButton}
-              onClick={() => toggleAttemptExpanded(attempt.id)}
-            >
-              {isExpanded ? "Скрыть" : "Подробнее"}
-            </button>
           </div>
         </div>
 
@@ -191,6 +288,87 @@ export default function ParticipantCabinet() {
               </ul>
             ) : (
               <p className={styles.text}>Подробные ответы для этой попытки не сохранены.</p>
+            )}
+
+            {hasLiveLeaderboard && (
+              <div className={styles.attemptSupplement}>
+                <div className={styles.sectionHeaderTop}>
+                  <p className={styles.attemptSupplementTitle}>Итоговый лидерборд live-сессии</p>
+                  {myLeaderboardEntry && (
+                    <span className={styles.liveResultCallout}>
+                      Ваше место: #{myLeaderboardEntry.place}
+                    </span>
+                  )}
+                </div>
+
+                {isLiveLeaderboardLoading && <p className={styles.text}>Загружаем рейтинг...</p>}
+
+                {!isLiveLeaderboardLoading && liveLeaderboardError && (
+                  <AsyncStateNotice
+                    variant="error"
+                    message={liveLeaderboardError}
+                    actionLabel="Повторить"
+                    onAction={() => loadLiveLeaderboard(liveSessionId)}
+                  />
+                )}
+
+                {!isLiveLeaderboardLoading &&
+                  !liveLeaderboardError &&
+                  liveLeaderboard &&
+                  Array.isArray(liveLeaderboard.entries) &&
+                  liveLeaderboard.entries.length > 0 && (
+                    <ul className={`${styles.resultList} ${styles.attemptLeaderboardList}`}>
+                      {liveLeaderboard.entries.map((entry) => {
+                        const participantName =
+                          String(entry?.participantName || "Участник").trim() || "Участник";
+                        const avatarChar = participantName.charAt(0).toUpperCase() || "U";
+                        const isCurrentUser = Number(entry.participantId) === myParticipantId;
+
+                        return (
+                          <li
+                            key={`${attempt.id}-${entry.participantId}-${entry.place}`}
+                            className={`${styles.resultItem} ${
+                              isCurrentUser ? styles.attemptLeaderboardItemActive : ""
+                            }`}
+                          >
+                            <div className={styles.resultMain}>
+                              <span className={styles.resultAvatar} aria-hidden="true">
+                                {entry.participantAvatarDataUrl ? (
+                                  <img
+                                    className={styles.resultAvatarImage}
+                                    src={entry.participantAvatarDataUrl}
+                                    alt=""
+                                  />
+                                ) : (
+                                  avatarChar
+                                )}
+                              </span>
+                              <div className={styles.resultInfo}>
+                                <p className={styles.resultName}>
+                                  #{entry.place} {participantName}
+                                </p>
+                                <p className={styles.resultScore}>
+                                  {entry.score}/{entry.maxScore} баллов
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`${styles.resultBadge} ${getResultBadgeClass(entry.percentage)}`}>
+                              {entry.percentage}%
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+
+                {!isLiveLeaderboardLoading &&
+                  !liveLeaderboardError &&
+                  (!liveLeaderboard ||
+                    !Array.isArray(liveLeaderboard.entries) ||
+                    liveLeaderboard.entries.length === 0) && (
+                    <p className={styles.text}>Итоговый рейтинг для этой live-сессии пока недоступен.</p>
+                  )}
+              </div>
             )}
           </div>
         )}
@@ -213,15 +391,11 @@ export default function ParticipantCabinet() {
             (best, attempt) => Math.max(best, Number(attempt.percentage || 0)),
             0
           );
+          const isDeleting = deletingGroupKey === group.key;
 
           return (
             <li key={group.key} className={styles.resultGroupItem}>
-              <button
-                type="button"
-                className={styles.resultGroupButton}
-                onClick={() => toggleQuizGroupExpanded(group.key)}
-                aria-expanded={isGroupExpanded}
-              >
+              <div className={styles.resultGroupButton}>
                 <div className={styles.resultGroupMain}>
                   <span className={styles.resultAvatar} aria-hidden="true">
                     {group.avatarChar}
@@ -234,17 +408,34 @@ export default function ParticipantCabinet() {
                   </div>
                 </div>
                 <div className={styles.resultGroupAside}>
-                  <span className={styles.resultGroupCount}>{group.attempts.length}</span>
-                  <span
-                    className={`${styles.resultGroupChevron} ${
-                      isGroupExpanded ? styles.resultGroupChevronOpen : ""
-                    }`}
-                    aria-hidden="true"
+                  <button
+                    type="button"
+                    className={styles.deleteIconButton}
+                    disabled={isDeleting}
+                    onClick={() => handleDeleteGroup(group)}
+                    aria-label={isDeleting ? "Удаление попыток..." : "Удалить попытки"}
+                    title="Удалить попытки"
                   >
-                    ▾
-                  </span>
+                    <TrashIcon className={styles.deleteIconGlyph} />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.resultGroupIconButton}
+                    onClick={() => toggleQuizGroupExpanded(group.key)}
+                    aria-expanded={isGroupExpanded}
+                    aria-label={isGroupExpanded ? "Свернуть группу" : "Развернуть группу"}
+                  >
+                    <span
+                      className={`${styles.resultGroupChevron} ${
+                        isGroupExpanded ? styles.resultGroupChevronOpen : ""
+                      }`}
+                      aria-hidden="true"
+                    >
+                      ▾
+                    </span>
+                  </button>
                 </div>
-              </button>
+              </div>
 
               {isGroupExpanded && (
                 <ul className={styles.resultGroupAttempts}>
@@ -283,19 +474,18 @@ export default function ParticipantCabinet() {
           bestPercentage={attemptsStats.bestPercentage}
           joinCode={joinCode}
           joinError={joinError}
-          notes={SHOWCASE_NOTES}
           onJoinCodeChange={(event) => setJoinCode(event.target.value)}
           onJoin={handleJoinQuiz}
         />
 
-        <FeatureDeckSection signals={PARTICIPANT_SIGNALS} />
-
         <section className={styles.archiveSection}>
           <div className={styles.archiveHeader}>
             <div className={styles.archiveHeaderCopy}>
-              <h1 className={styles.title}>Результаты и история прохождений</h1>
+              <h1 className={`${styles.title} ${styles.archiveSectionTitle}`}>
+                Результаты и история прохождений
+              </h1>
               <p className={styles.sectionLead}>
-                Вся история хранится в одном месте: live-квизы, самостоятельные попытки и детали по каждому ответу.
+                Здесь хранится история live-квизов и детали по каждому ответу.
               </p>
             </div>
 
@@ -333,22 +523,31 @@ export default function ParticipantCabinet() {
           )}
 
           {!isAttemptsLoading && !attemptsError && attempts.length > 0 && (
-            <div className={styles.archiveColumns}>
+            <div
+              className={`${styles.archiveColumns} ${!hasClassicAttempts ? styles.archiveColumnsSingle : ""}`}
+            >
               <section className={styles.archiveLane}>
                 <div className={styles.archiveLaneHeader}>
-                  <h2 className={styles.sectionSubtitle}>Live-квизы</h2>
+                  <h2 className={styles.sectionSubtitle}>
+                    {hasClassicAttempts ? "Live-квизы" : "История live-квизов"}
+                  </h2>
                   <p className={styles.archiveLaneText}>Подключения по коду комнаты и результаты из live-эфира.</p>
                 </div>
+                {deleteError && <p className={styles.formError}>{deleteError}</p>}
                 {renderAttempts(liveAttempts, "Live-прохождений пока нет.", "live")}
               </section>
 
-              <section className={styles.archiveLane}>
-                <div className={styles.archiveLaneHeader}>
-                  <h2 className={styles.sectionSubtitle}>Самостоятельные попытки</h2>
-                  <p className={styles.archiveLaneText}>Обычные прохождения с сохранением баллов и скорости ответа.</p>
-                </div>
-                {renderAttempts(classicAttempts, "Обычных прохождений пока нет.", "classic")}
-              </section>
+              {hasClassicAttempts && (
+                <section className={styles.archiveLane}>
+                  <div className={styles.archiveLaneHeader}>
+                    <h2 className={styles.sectionSubtitle}>Самостоятельные попытки</h2>
+                    <p className={styles.archiveLaneText}>
+                      Архив обычных прохождений с сохранением баллов и скорости ответа.
+                    </p>
+                  </div>
+                  {renderAttempts(classicAttempts, "Обычных прохождений пока нет.", "classic")}
+                </section>
+              )}
             </div>
           )}
         </section>

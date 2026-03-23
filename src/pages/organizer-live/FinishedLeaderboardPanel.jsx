@@ -4,7 +4,6 @@ export default function FinishedLeaderboardPanel({ leaderboard }) {
   return (
     <div className={styles.liveResultBoard}>
       <div className={styles.liveResultHeader}>
-        <p className={styles.liveStateEyebrow}>Broadcast complete</p>
         <h2 className={styles.liveStageTitle}>Итоговый рейтинг эфира</h2>
         <p className={styles.liveStateText}>
           Live-сессия завершена. Рейтинг сохранен и доступен в архиве кабинета организатора.

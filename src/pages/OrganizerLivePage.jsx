@@ -10,7 +10,6 @@ import ActiveQuestionPanel from "./organizer-live/ActiveQuestionPanel";
 import FinishedLeaderboardPanel from "./organizer-live/FinishedLeaderboardPanel";
 import LiveHeroSection from "./organizer-live/LiveHeroSection";
 import LiveLobbyPanel from "./organizer-live/LiveLobbyPanel";
-import LiveSidebar from "./organizer-live/LiveSidebar";
 import { getLiveStatusLabel, getStoredUser } from "./organizer-live/utils";
 
 export default function OrganizerLivePage() {
@@ -286,7 +285,6 @@ export default function OrganizerLivePage() {
   const sessionIsPaused = Boolean(session?.isPaused);
   const sessionCurrentQuestionIndex = Number(session?.currentQuestionIndex ?? -1);
   const questionTimeLimitSeconds = Math.max(0, Number(session?.questionTimeLimitSeconds || 0));
-  const questionStartedAt = session?.currentQuestionStartedAt;
   const serverReportedRemainingSeconds = Math.max(0, Number(session?.questionRemainingSeconds || 0));
 
   useEffect(() => {
@@ -303,20 +301,16 @@ export default function OrganizerLivePage() {
       return undefined;
     }
 
-    const startedAtMs = new Date(questionStartedAt || "").getTime();
+    const syncedAtMs = Date.now();
+    const initialRemainingSeconds = serverReportedRemainingSeconds;
     const update = () => {
-      if (Number.isFinite(startedAtMs) && startedAtMs > 0) {
-        const elapsedSeconds = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
-        setQuestionRemainingSeconds(Math.max(0, questionTimeLimitSeconds - elapsedSeconds));
-        return;
-      }
-      setQuestionRemainingSeconds(serverReportedRemainingSeconds);
+      const elapsedSeconds = Math.max(0, Math.floor((Date.now() - syncedAtMs) / 1000));
+      setQuestionRemainingSeconds(Math.max(0, initialRemainingSeconds - elapsedSeconds));
     };
     update();
     const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
   }, [
-    questionStartedAt,
     questionTimeLimitSeconds,
     serverReportedRemainingSeconds,
     sessionCurrentQuestionIndex,
@@ -551,27 +545,85 @@ export default function OrganizerLivePage() {
                 {session.status === "finished" && (
                   <FinishedLeaderboardPanel leaderboard={leaderboard} />
                 )}
-              </section>
 
-              <LiveSidebar
-                joinCode={session.joinCode}
-                participantsCount={session.participantsCount}
-                sessionStatus={session.status}
-                isLiveStarted={session.isLiveStarted}
-                isPaused={session.isPaused}
-                currentQuestionPosition={currentQuestionPosition}
-                questionCount={session.questionCount}
-                isActionLoading={isActionLoading}
-                actionType={actionType}
-                wsStatus={wsStatus}
-                lastWsEvent={lastWsEvent}
-                onStartSession={handleStartSession}
-                onPauseSession={handlePauseSession}
-                onResumeSession={handleResumeSession}
-                onNextQuestion={handleNextQuestion}
-                onFinishSession={handleFinishSession}
-                onRefreshLeaderboard={() => refreshLeaderboard(session.sessionId)}
-              />
+                <div className={styles.liveStageControlPanel}>
+                  <div className={styles.liveStageMetaCard}>
+                    <div className={styles.liveStageMetaList}>
+                      <p className={styles.liveSidebarText}>Комната: {session.joinCode}</p>
+                      <p className={styles.liveSidebarText}>Участников: {session.participantsCount}</p>
+                      <p className={styles.liveSidebarText}>
+                        {session.status === "running" && session.isLiveStarted
+                          ? `Вопрос ${currentQuestionPosition} из ${session.questionCount}`
+                          : "Эфир еще не запущен"}
+                      </p>
+                      <p className={styles.liveSidebarText}>WS: {wsStatus}</p>
+                      <p className={styles.liveSidebarText}>Последнее событие: {lastWsEvent}</p>
+                    </div>
+
+                    <div className={styles.liveActionStack}>
+                      {session.status === "running" && !session.isLiveStarted && (
+                        <button
+                          type="button"
+                          className={styles.formSubmitButton}
+                          onClick={handleStartSession}
+                          disabled={isActionLoading}
+                        >
+                          {isActionLoading && actionType === "start" ? "Запускаем..." : "Начать квиз"}
+                        </button>
+                      )}
+                      {session.status === "running" && session.isLiveStarted && !session.isPaused && (
+                        <button
+                          type="button"
+                          className={styles.formSubmitButton}
+                          onClick={handlePauseSession}
+                          disabled={isActionLoading}
+                        >
+                          {isActionLoading && actionType === "pause" ? "Ставим на паузу..." : "Пауза"}
+                        </button>
+                      )}
+                      {session.status === "running" && session.isLiveStarted && session.isPaused && (
+                        <button
+                          type="button"
+                          className={styles.formSubmitButton}
+                          onClick={handleResumeSession}
+                          disabled={isActionLoading}
+                        >
+                          {isActionLoading && actionType === "resume" ? "Возобновляем..." : "Продолжить"}
+                        </button>
+                      )}
+                      {session.status === "running" && session.isLiveStarted && (
+                        <button
+                          type="button"
+                          className={styles.formSubmitButton}
+                          onClick={handleNextQuestion}
+                          disabled={isActionLoading}
+                        >
+                          {isActionLoading && actionType === "next" ? "Обновление..." : "Следующий вопрос"}
+                        </button>
+                      )}
+                      {session.status === "running" && (
+                        <button
+                          type="button"
+                          className={styles.quizDeleteButton}
+                          onClick={handleFinishSession}
+                          disabled={isActionLoading}
+                        >
+                          {isActionLoading && actionType === "finish" ? "Завершаем..." : "Завершить эфир"}
+                        </button>
+                      )}
+                      {session.status === "finished" && (
+                        <button
+                          type="button"
+                          className={styles.formSubmitButton}
+                          onClick={() => refreshLeaderboard(session.sessionId)}
+                        >
+                          Обновить рейтинг
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
             </section>
           </>
         )}

@@ -241,13 +241,18 @@ export default function CreateQuizPage() {
         error: "",
       });
 
-      const response = await fetch(`${apiBaseUrl}/api/uploads/question-image`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
+      let response;
+      try {
+        response = await fetch(`${apiBaseUrl}/api/uploads/question-image`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+      } catch (_error) {
+        throw new Error("Нет связи с API. Проверьте, что backend запущен и адрес сервера доступен.");
+      }
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data.message || "Не удалось загрузить изображение.");

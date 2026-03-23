@@ -15,7 +15,7 @@ export async function requestWithAuth(url, options = {}) {
       },
     });
   } catch (_error) {
-    throw new Error("Нет связи с API. Запустите сервер: npm run server");
+    throw new Error("Нет связи с API. Проверьте, что backend запущен и адрес сервера доступен.");
   }
 
   const data = await response.json().catch(() => ({}));

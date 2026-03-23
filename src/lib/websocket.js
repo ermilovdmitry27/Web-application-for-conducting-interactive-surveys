@@ -1,8 +1,9 @@
-const DEFAULT_API_URL = "http://localhost:4000";
+import { getApiBaseUrl } from "./api/config";
+
 const DEFAULT_WS_PATH = "/ws";
 
 export function buildWebSocketUrl() {
-  const apiBaseUrl = process.env.REACT_APP_API_URL || DEFAULT_API_URL;
+  const apiBaseUrl = getApiBaseUrl();
   const wsPath = process.env.REACT_APP_WS_PATH || DEFAULT_WS_PATH;
 
   const url = new URL(apiBaseUrl);
@@ -21,4 +22,3 @@ export function parseWebSocketMessage(rawValue) {
     return null;
   }
 }
-

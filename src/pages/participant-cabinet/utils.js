@@ -106,6 +106,7 @@ export function getGroupedAttempts(list, groupPrefix) {
     if (!groups.has(groupKey)) {
       groups.set(groupKey, {
         key: groupKey,
+        quizId: Number.isInteger(numericQuizId) && numericQuizId > 0 ? numericQuizId : null,
         title,
         avatarChar: title.charAt(0).toUpperCase() || "Q",
         attempts: [],

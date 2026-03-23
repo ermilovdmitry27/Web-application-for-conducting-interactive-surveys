@@ -1,4 +1,26 @@
 const { DEFAULT_QUIZ_QUESTION_TIME_SECONDS } = require("../config/env");
+const MANAGED_QUESTION_UPLOADS_PREFIX = "/uploads/questions/";
+
+function normalizeManagedQuestionImageUrl(rawValue) {
+  const imageUrl = typeof rawValue === "string" ? rawValue.trim() : "";
+  if (!imageUrl) {
+    return "";
+  }
+
+  if (imageUrl.startsWith(MANAGED_QUESTION_UPLOADS_PREFIX)) {
+    return imageUrl;
+  }
+
+  try {
+    const parsed = new URL(imageUrl);
+    if (!parsed.pathname.startsWith(MANAGED_QUESTION_UPLOADS_PREFIX)) {
+      return imageUrl;
+    }
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch (_error) {
+    return imageUrl;
+  }
+}
 
 function mapDbUser(row) {
   return {
@@ -43,7 +65,7 @@ function mapDbQuiz(row) {
       }
       const type = question.type === "image" ? "image" : "text";
       const prompt = typeof question.prompt === "string" ? question.prompt : "";
-      const imageUrl = typeof question.imageUrl === "string" ? question.imageUrl : "";
+      const imageUrl = normalizeManagedQuestionImageUrl(question.imageUrl);
       const answerMode = question.answerMode === "multiple" ? "multiple" : "single";
       const options = Array.isArray(question.options)
         ? question.options

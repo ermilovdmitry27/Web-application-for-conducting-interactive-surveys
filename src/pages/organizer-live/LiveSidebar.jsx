@@ -22,7 +22,6 @@ export default function LiveSidebar({
   return (
     <aside className={styles.liveSidebar}>
       <article className={styles.liveSidebarCard}>
-        <p className={styles.liveSidebarLabel}>Session brief</p>
         <p className={styles.liveSidebarText}>Комната: {joinCode}</p>
         <p className={styles.liveSidebarText}>Участников: {participantsCount}</p>
         <p className={styles.liveSidebarText}>
@@ -33,7 +32,6 @@ export default function LiveSidebar({
       </article>
 
       <article className={styles.liveSidebarCard}>
-        <p className={styles.liveSidebarLabel}>Control rail</p>
         <div className={styles.liveActionStack}>
           {sessionStatus === "running" && !isLiveStarted && (
             <button
@@ -98,7 +96,6 @@ export default function LiveSidebar({
       </article>
 
       <article className={styles.liveSidebarCard}>
-        <p className={styles.liveSidebarLabel}>Realtime</p>
         <p className={styles.liveSidebarText}>WS: {wsStatus}</p>
         <p className={styles.liveSidebarText}>Последнее событие: {lastWsEvent}</p>
       </article>

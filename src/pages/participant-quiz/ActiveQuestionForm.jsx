@@ -1,11 +1,9 @@
 import styles from "../../css/CabinetPage.module.css";
-import { formatSeconds } from "./utils";
+import { resolveApiAssetUrl } from "../../lib/api/config";
 
 export default function ActiveQuestionForm({
   currentQuestion,
   isPaused,
-  questionRemainingSeconds,
-  questionTimeLimitSeconds,
   selectedOptionIds,
   canSubmitAnswer,
   isQuestionExpired,
@@ -29,31 +27,14 @@ export default function ActiveQuestionForm({
     <form className={styles.liveQuestionForm} onSubmit={onSubmit}>
       <div className={styles.liveQuestionHeader}>
         <div className={styles.liveQuestionMeta}>
-          <p className={styles.liveStateEyebrow}>Question {currentQuestion.index + 1}</p>
           <h2 className={styles.liveStageTitle}>{currentQuestion.prompt}</h2>
-        </div>
-        <div className={styles.liveTimerWrap}>
-          <span
-            className={`${styles.quizTimer} ${
-              !isPaused && questionRemainingSeconds <= 5 ? styles.quizTimerWarning : ""
-            }`}
-          >
-            {isPaused
-              ? `Пауза: ${formatSeconds(questionRemainingSeconds)}`
-              : `Осталось: ${formatSeconds(questionRemainingSeconds)}`}
-          </span>
-          <p className={styles.liveHelperText}>
-            {isPaused
-              ? "Квиз на паузе. Ответы временно заблокированы."
-              : `На вопрос: ${formatSeconds(questionTimeLimitSeconds)}`}
-          </p>
         </div>
       </div>
 
       {currentQuestion.type === "image" && currentQuestion.imageUrl && (
         <img
           className={styles.participantQuestionImage}
-          src={currentQuestion.imageUrl}
+          src={resolveApiAssetUrl(currentQuestion.imageUrl)}
           alt={`Иллюстрация к вопросу ${currentQuestion.index + 1}`}
         />
       )}

@@ -24,6 +24,7 @@
     "start": "react-scripts start",
     "server": "node server/index.js",
     "dev": "concurrently \"npm run server\" \"npm start\"",
+    "phone": "npm run build && bash server/scripts/start-phone-server.sh",
     "reset:db": "node server/scripts/reset-db.js",
     "seed:dev": "node server/scripts/seed-dev.js",
     "seed:reset": "npm run reset:db && npm run seed:dev",

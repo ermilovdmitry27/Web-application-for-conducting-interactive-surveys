@@ -67,3 +67,24 @@
   text-transform: uppercase;
   box-shadow: 0 14px 28px rgba(36, 87, 255, 0.16);
 }
+
+@media (max-width: 640px) {
+  .notFoundCard {
+    padding: 22px 18px;
+  }
+
+  .notFoundEyebrow,
+  .notFoundLink {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+
+  .notFoundTitle {
+    font-size: clamp(30px, 9vw, 42px);
+  }
+
+  .notFoundText {
+    font-size: 15px;
+    line-height: 1.62;
+  }
+}

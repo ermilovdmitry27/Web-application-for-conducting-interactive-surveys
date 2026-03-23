@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import styles from "../css/RegistrationPage.module.css";
+import { getApiBaseUrl } from "../lib/api/config";
 
 export default function RegistrationPage() {
   const [agreementChecked, setAgreementChecked] = useState(false);
@@ -9,6 +10,7 @@ export default function RegistrationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
+  const apiBaseUrl = getApiBaseUrl();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -40,14 +42,18 @@ export default function RegistrationPage() {
 
     try {
       setIsSubmitting(true);
-      const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:4000";
-      const response = await fetch(`${apiBaseUrl}/api/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      let response;
+      try {
+        response = await fetch(`${apiBaseUrl}/api/auth/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+      } catch (_error) {
+        throw new Error("Нет связи с API. Проверьте, что backend запущен и приложение открыто по актуальному адресу.");
+      }
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {

@@ -372,11 +372,39 @@
     justify-content: center;
   }
 
+  .brandTag,
+  .heroEyebrow,
+  .panelEyebrow,
+  .roleCardEyebrow,
+  .stepLabel {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+
   .centerTitle {
-    font-size: clamp(42px, 12vw, 66px);
+    font-size: clamp(36px, 11vw, 56px);
   }
 
   .heroLead {
-    font-size: 16px;
+    font-size: 15px;
+    line-height: 1.62;
+  }
+
+  .panelTitle {
+    font-size: clamp(20px, 6vw, 26px);
+  }
+
+  .stepTitle {
+    font-size: 18px;
+  }
+
+  .stepText,
+  .roleCardText {
+    font-size: 14px;
+    line-height: 1.58;
+  }
+
+  .roleCardTitle {
+    font-size: clamp(18px, 5.6vw, 24px);
   }
 }

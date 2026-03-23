@@ -3,7 +3,6 @@ import styles from "../../css/CabinetPage.module.css";
 export default function LiveLobbyPanel({ participants }) {
   return (
     <div className={styles.liveStatePanel}>
-      <p className={styles.liveStateEyebrow}>Lobby</p>
       <h2 className={styles.liveStageTitle}>Комната открыта для участников.</h2>
       <p className={styles.liveStateText}>
         Игроки уже могут подключаться по коду комнаты. Когда все готовы, запускайте квиз из панели управления.

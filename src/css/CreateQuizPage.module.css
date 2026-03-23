@@ -49,16 +49,40 @@
   box-shadow: 0 16px 28px rgba(37, 99, 235, 0.16);
 }
 
+.deleteIconButton {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--danger);
+  background: var(--danger-soft);
+  border: 1px solid rgba(199, 74, 74, 0.2);
+  cursor: pointer;
+}
+
+.deleteIconGlyph {
+  width: 16px;
+  height: 16px;
+}
+
 .primaryButton:hover,
 .secondaryButton:hover,
 .backButton:hover,
 .optionDelete:hover,
+.deleteIconButton:hover,
 .optionAdd:hover,
 .uploadButton:hover {
   transform: translateY(-1px);
 }
 
 .primaryButton:disabled,
+.deleteIconButton:disabled,
 .optionDelete:disabled,
 .optionAdd:disabled {
   opacity: 0.7;
@@ -442,8 +466,19 @@
     padding: 18px;
   }
 
+  .topActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .summaryGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(6px, 2vw, 10px);
+  }
+
+  .summaryCard {
+    padding: clamp(10px, 2.8vw, 14px);
+    border-radius: 14px;
   }
 
   .sectionPanel {
@@ -454,9 +489,93 @@
   .primaryButton,
   .secondaryButton,
   .optionDelete,
+  .deleteIconButton,
   .optionAdd,
   .uploadButton {
     width: 100%;
     justify-content: center;
+  }
+
+  .backButton,
+  .optionDelete,
+  .deleteIconButton,
+  .optionAdd,
+  .uploadButton,
+  .primaryButton,
+  .secondaryButton,
+  .summaryLabel {
+    font-size: clamp(7px, 1.8vw, 10px);
+    letter-spacing: clamp(0.06em, 0.1vw, 0.1em);
+  }
+
+  .deleteIconButton {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+  }
+
+  .deleteIconGlyph {
+    width: 14px;
+    height: 14px;
+  }
+
+  .title {
+    font-size: clamp(28px, 8.5vw, 38px);
+  }
+
+  .heroLead,
+  .sectionText,
+  .metaText,
+  .imageUploadMeta {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .summaryValue {
+    margin-top: 8px;
+    font-size: clamp(18px, 5.8vw, 24px);
+  }
+
+  .sectionTitle {
+    font-size: clamp(22px, 7vw, 28px);
+  }
+
+  .questionTitle,
+  .imageUploadTitle {
+    font-size: clamp(18px, 5.6vw, 24px);
+  }
+
+  .label,
+  .checkboxLabel,
+  .optionCheck,
+  .input,
+  .textarea,
+  .inputCompact {
+    font-size: 16px;
+  }
+
+  .input,
+  .inputCompact {
+    min-height: 48px;
+  }
+
+  .checkboxLabel {
+    align-items: flex-start;
+    min-height: 0;
+    padding: 12px 14px;
+  }
+
+  .optionRow {
+    gap: 8px;
+    padding-left: 0;
+  }
+
+  .imagePreview {
+    max-height: 220px;
+  }
+
+  .errorText {
+    font-size: 13px;
   }
 }

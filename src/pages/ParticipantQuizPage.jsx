@@ -142,7 +142,6 @@ export default function ParticipantQuizPage() {
   const sessionIsPaused = Boolean(session?.isPaused);
   const sessionCurrentQuestionIndex = Number(session?.currentQuestionIndex ?? -1);
   const questionTimeLimitSeconds = Math.max(0, Number(session?.questionTimeLimitSeconds || 0));
-  const questionStartedAt = session?.currentQuestionStartedAt;
   const serverReportedRemainingSeconds = Math.max(0, Number(session?.questionRemainingSeconds || 0));
 
   useEffect(() => {
@@ -174,20 +173,16 @@ export default function ParticipantQuizPage() {
       return undefined;
     }
 
-    const startedAtMs = new Date(questionStartedAt || "").getTime();
+    const syncedAtMs = Date.now();
+    const initialRemainingSeconds = serverReportedRemainingSeconds;
     const update = () => {
-      if (Number.isFinite(startedAtMs) && startedAtMs > 0) {
-        const elapsedSeconds = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
-        setQuestionRemainingSeconds(Math.max(0, questionTimeLimitSeconds - elapsedSeconds));
-        return;
-      }
-      setQuestionRemainingSeconds(serverReportedRemainingSeconds);
+      const elapsedSeconds = Math.max(0, Math.floor((Date.now() - syncedAtMs) / 1000));
+      setQuestionRemainingSeconds(Math.max(0, initialRemainingSeconds - elapsedSeconds));
     };
     update();
     const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
   }, [
-    questionStartedAt,
     questionTimeLimitSeconds,
     serverReportedRemainingSeconds,
     sessionCurrentQuestionIndex,
@@ -458,6 +453,7 @@ export default function ParticipantQuizPage() {
     }
     return leaderboard.entries.find((entry) => Number(entry.participantId) === myId) || null;
   }, [leaderboard, user?.id]);
+  const isFinished = session?.status === "finished";
 
   return (
     <main className={styles.page}>
@@ -525,7 +521,9 @@ export default function ParticipantQuizPage() {
             {actionSuccess && <p className={styles.formSuccess}>{actionSuccess}</p>}
 
             <section className={styles.liveWorkspaceGrid}>
-              <section className={styles.liveStageCard}>
+              <section
+                className={`${styles.liveStageCard} ${isFinished ? styles.liveStageCardSingle : ""}`}
+              >
                 {isRunning && !isLiveStarted && (
                   <LiveLobbyPanel />
                 )}
@@ -538,8 +536,6 @@ export default function ParticipantQuizPage() {
                   <ActiveQuestionForm
                     currentQuestion={currentQuestion}
                     isPaused={sessionIsPaused}
-                    questionRemainingSeconds={questionRemainingSeconds}
-                    questionTimeLimitSeconds={session.questionTimeLimitSeconds}
                     selectedOptionIds={selectedOptionIds}
                     canSubmitAnswer={canSubmitAnswer}
                     isQuestionExpired={isQuestionExpired}
@@ -555,20 +551,30 @@ export default function ParticipantQuizPage() {
                   <FinishedLeaderboardPanel
                     leaderboard={leaderboard}
                     myLeaderboardPlace={myLeaderboardPlace}
+                    sessionStatus={session.status}
+                    isPaused={session.isPaused}
+                    wsStatus={wsStatus}
+                    attemptsInfo={attemptsInfo}
+                    onRefreshLeaderboard={() => refreshLeaderboard(session.sessionId)}
+                  />
+                )}
+
+                {!isFinished && (
+                  <LiveSidebar
+                    sessionStatus={session.status}
+                    isPaused={session.isPaused}
+                    wsStatus={wsStatus}
+                    attemptsInfo={attemptsInfo}
+                    isRunning={isRunning}
+                    isLiveStarted={isLiveStarted}
+                    hasActiveQuestion={Boolean(currentQuestion)}
+                    questionRemainingSeconds={questionRemainingSeconds}
+                    questionTimeLimitSeconds={session.questionTimeLimitSeconds}
+                    myLeaderboardPlace={myLeaderboardPlace}
+                    onRefreshLeaderboard={() => refreshLeaderboard(session.sessionId)}
                   />
                 )}
               </section>
-
-              <LiveSidebar
-                sessionStatus={session.status}
-                isPaused={session.isPaused}
-                wsStatus={wsStatus}
-                attemptsInfo={attemptsInfo}
-                isRunning={isRunning}
-                isLiveStarted={isLiveStarted}
-                myLeaderboardPlace={myLeaderboardPlace}
-                onRefreshLeaderboard={() => refreshLeaderboard(session.sessionId)}
-              />
             </section>
           </>
         )}

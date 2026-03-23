@@ -1,4 +1,6 @@
 import styles from "../../css/CreateQuizPage.module.css";
+import TrashIcon from "../../components/TrashIcon";
+import { resolveApiAssetUrl } from "../../lib/api/config";
 
 import {
   MAX_OPTIONS,
@@ -94,15 +96,17 @@ export default function QuestionCard({
             <div className={styles.imagePreviewWrap}>
               <img
                 className={styles.imagePreview}
-                src={question.imageUrl}
+                src={resolveApiAssetUrl(question.imageUrl)}
                 alt={`Иллюстрация для вопроса ${questionIndex + 1}`}
               />
               <button
                 type="button"
-                className={styles.optionDelete}
+                className={styles.deleteIconButton}
                 onClick={() => onQuestionImageRemove(questionIndex)}
+                aria-label="Удалить изображение"
+                title="Удалить изображение"
               >
-                Удалить изображение
+                <TrashIcon className={styles.deleteIconGlyph} />
               </button>
             </div>
           ) : (
@@ -137,12 +141,13 @@ export default function QuestionCard({
             />
             <button
               type="button"
-              className={styles.optionDelete}
+              className={styles.deleteIconButton}
               onClick={() => onRemoveOption(questionIndex, optionIndex)}
               disabled={question.options.length <= MIN_OPTIONS}
               aria-label="Удалить вариант"
+              title="Удалить вариант"
             >
-              Удалить
+              <TrashIcon className={styles.deleteIconGlyph} />
             </button>
           </div>
         ))}

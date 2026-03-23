@@ -15,7 +15,7 @@ export default function QuizRulesSection({
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>Поведение квиза</h2>
         <p className={styles.sectionText}>
-          Управляйте активностью сценария, перемешиванием вопросов и тем, как участники видят свои ответы.
+          Управляйте активностью сценария, перемешиванием вопросов и тем, как участники могут менять ответы в live-режиме.
         </p>
       </div>
 
@@ -34,7 +34,7 @@ export default function QuizRulesSection({
             checked={allowBackNavigation}
             onChange={onAllowBackNavigationChange}
           />
-          <span>Разрешить возврат к прошлым вопросам</span>
+          <span>Разрешить менять ответ до закрытия live-вопроса</span>
         </label>
         <label className={styles.checkboxLabel}>
           <input

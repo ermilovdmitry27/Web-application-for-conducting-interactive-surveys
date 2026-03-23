@@ -1,5 +1,5 @@
 import styles from "../../css/CabinetPage.module.css";
-import { getLiveStatusLabel } from "./utils";
+import { formatSeconds, getLiveStatusLabel } from "./utils";
 
 export default function LiveSidebar({
   sessionStatus,
@@ -8,13 +8,34 @@ export default function LiveSidebar({
   attemptsInfo,
   isRunning,
   isLiveStarted,
+  hasActiveQuestion,
+  questionRemainingSeconds,
+  questionTimeLimitSeconds,
   myLeaderboardPlace,
   onRefreshLeaderboard,
 }) {
   return (
     <aside className={styles.liveSidebar}>
+      {isRunning && isLiveStarted && hasActiveQuestion && (
+        <article className={`${styles.liveSidebarCard} ${styles.liveSidebarTimerCard}`}>
+          <span
+            className={`${styles.quizTimer} ${
+              !isPaused && questionRemainingSeconds <= 5 ? styles.quizTimerWarning : ""
+            }`}
+          >
+            {isPaused
+              ? `Пауза: ${formatSeconds(questionRemainingSeconds)}`
+              : `Осталось: ${formatSeconds(questionRemainingSeconds)}`}
+          </span>
+          <p className={styles.liveHelperText}>
+            {isPaused
+              ? "Квиз на паузе. Ответы временно заблокированы."
+              : `На вопрос: ${formatSeconds(questionTimeLimitSeconds)}`}
+          </p>
+        </article>
+      )}
+
       <article className={styles.liveSidebarCard}>
-        <p className={styles.liveSidebarLabel}>Session brief</p>
         <p className={styles.liveSidebarText}>
           Статус: {getLiveStatusLabel(sessionStatus, isPaused)} • WS: {wsStatus}
         </p>
@@ -26,7 +47,6 @@ export default function LiveSidebar({
       </article>
 
       <article className={styles.liveSidebarCard}>
-        <p className={styles.liveSidebarLabel}>Что дальше</p>
         <p className={styles.liveSidebarText}>
           {sessionStatus === "finished"
             ? "Рейтинг уже сохранен. Можно вернуться в кабинет и открыть историю прохождений."
@@ -38,7 +58,6 @@ export default function LiveSidebar({
 
       {myLeaderboardPlace && sessionStatus === "finished" && (
         <article className={styles.liveSidebarCard}>
-          <p className={styles.liveSidebarLabel}>Ваше место</p>
           <p className={styles.liveSidebarValue}>#{myLeaderboardPlace.place}</p>
           <p className={styles.liveSidebarText}>
             {myLeaderboardPlace.score}/{myLeaderboardPlace.maxScore} баллов •{" "}

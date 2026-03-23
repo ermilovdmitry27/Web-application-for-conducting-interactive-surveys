@@ -1,4 +1,5 @@
 import styles from "../../css/CabinetPage.module.css";
+import { resolveApiAssetUrl } from "../../lib/api/config";
 import { formatSeconds } from "./utils";
 
 export default function ActiveQuestionPanel({
@@ -44,7 +45,7 @@ export default function ActiveQuestionPanel({
       {currentQuestion.type === "image" && currentQuestion.imageUrl && (
         <img
           className={styles.participantQuestionImage}
-          src={currentQuestion.imageUrl}
+          src={resolveApiAssetUrl(currentQuestion.imageUrl)}
           alt={`Иллюстрация к вопросу ${currentQuestion.index + 1}`}
         />
       )}
