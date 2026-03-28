@@ -152,7 +152,8 @@ describe("ParticipantCabinet smoke", () => {
               percentage: 60,
               timeSpentSeconds: 110,
               answeredQuestionsCount: 6,
-              isLive: false,
+              isLive: true,
+              liveSessionId: 88,
               answers: [],
             },
           ],
@@ -193,5 +194,37 @@ describe("ParticipantCabinet smoke", () => {
     await waitFor(() => {
       expect(screen.queryByText("Science Finals")).not.toBeInTheDocument();
     });
+  });
+
+  it("ignores non-live attempts and does not render the classic attempts block", async () => {
+    mockRequestWithAuth.mockImplementation((url, options = {}) => {
+      if (url === "http://api.test/api/attempts/mine" && options.method === "GET") {
+        return Promise.resolve({
+          attempts: [
+            {
+              id: 303,
+              quizId: 50,
+              quizTitle: "Dev Demo Quiz",
+              createdAt: "2026-03-28T10:00:00.000Z",
+              score: 10,
+              maxScore: 10,
+              percentage: 100,
+              timeSpentSeconds: 45,
+              answeredQuestionsCount: 10,
+              isLive: false,
+              answers: [],
+            },
+          ],
+        });
+      }
+
+      throw new Error(`Unexpected request: ${options.method || "GET"} ${url}`);
+    });
+
+    render(<ParticipantCabinet />);
+
+    expect(await screen.findByText("История пока пустая.")).toBeInTheDocument();
+    expect(screen.queryByText("Самостоятельные попытки")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dev Demo Quiz")).not.toBeInTheDocument();
   });
 });

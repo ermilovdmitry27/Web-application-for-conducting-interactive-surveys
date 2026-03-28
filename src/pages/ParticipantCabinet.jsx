@@ -82,24 +82,15 @@ export default function ParticipantCabinet() {
   }, [loadAttempts]);
 
   const attemptsView = useMemo(() => {
-    const total = attempts.length;
-    let liveTotal = 0;
+    const liveAttempts = attempts.filter((attempt) => Boolean(attempt?.isLive));
+    const total = liveAttempts.length;
     let percentageSum = 0;
     let bestPercentage = 0;
-    const liveAttempts = [];
-    const classicAttempts = [];
 
-    attempts.forEach((attempt) => {
+    liveAttempts.forEach((attempt) => {
       const percentage = Number(attempt?.percentage || 0);
       percentageSum += percentage;
       bestPercentage = Math.max(bestPercentage, percentage);
-
-      if (attempt?.isLive) {
-        liveTotal += 1;
-        liveAttempts.push(attempt);
-      } else {
-        classicAttempts.push(attempt);
-      }
     });
 
     const buildGroups = (list, groupPrefix) =>
@@ -114,20 +105,15 @@ export default function ParticipantCabinet() {
     return {
       stats: {
         total,
-        liveTotal,
+        liveTotal: total,
         averagePercentage: total > 0 ? Math.round(percentageSum / total) : 0,
         bestPercentage,
       },
-      liveAttempts,
-      classicAttempts,
-      hasClassicAttempts: classicAttempts.length > 0,
       liveGroups: buildGroups(liveAttempts, "live"),
-      classicGroups: buildGroups(classicAttempts, "classic"),
     };
   }, [attempts]);
 
   const attemptsStats = attemptsView.stats;
-  const hasClassicAttempts = attemptsView.hasClassicAttempts;
 
   const handleJoinQuiz = (event) => {
     event.preventDefault();
@@ -504,7 +490,7 @@ export default function ParticipantCabinet() {
               </p>
             </div>
 
-            {!isAttemptsLoading && !attemptsError && attempts.length > 0 && (
+            {!isAttemptsLoading && !attemptsError && attemptsStats.total > 0 && (
               <div className={styles.archiveStatsRow}>
                 <div className={styles.archiveStatCard}>
                   <p className={styles.archiveStatLabel}>Всего попыток</p>
@@ -533,39 +519,20 @@ export default function ParticipantCabinet() {
               onAction={() => loadAttempts()}
             />
           )}
-          {!isAttemptsLoading && !attemptsError && attempts.length === 0 && (
+          {!isAttemptsLoading && !attemptsError && attemptsStats.total === 0 && (
             <p className={styles.text}>История пока пустая.</p>
           )}
 
-          {!isAttemptsLoading && !attemptsError && attempts.length > 0 && (
-            <div
-              className={`${styles.archiveColumns} ${!hasClassicAttempts ? styles.archiveColumnsSingle : ""}`}
-            >
+          {!isAttemptsLoading && !attemptsError && attemptsStats.total > 0 && (
+            <div className={`${styles.archiveColumns} ${styles.archiveColumnsSingle}`}>
               <section className={styles.archiveLane}>
                 <div className={styles.archiveLaneHeader}>
-                  <h2 className={styles.sectionSubtitle}>
-                    {hasClassicAttempts ? "Live-квизы" : "История live-квизов"}
-                  </h2>
+                  <h2 className={styles.sectionSubtitle}>История live-квизов</h2>
                   <p className={styles.archiveLaneText}>Подключения по коду комнаты и результаты из live-эфира.</p>
                 </div>
                 {deleteError && <p className={styles.formError}>{deleteError}</p>}
                 {renderAttemptGroups(attemptsView.liveGroups, "Live-прохождений пока нет.")}
               </section>
-
-              {hasClassicAttempts && (
-                <section className={styles.archiveLane}>
-                  <div className={styles.archiveLaneHeader}>
-                    <h2 className={styles.sectionSubtitle}>Самостоятельные попытки</h2>
-                    <p className={styles.archiveLaneText}>
-                      Архив обычных прохождений с сохранением баллов и скорости ответа.
-                    </p>
-                  </div>
-                  {renderAttemptGroups(
-                    attemptsView.classicGroups,
-                    "Обычных прохождений пока нет."
-                  )}
-                </section>
-              )}
             </div>
           )}
         </section>

@@ -230,6 +230,16 @@ async function ensureQuizAttemptUsagesTable() {
       qa.live_session_id,
       qa.created_at
     FROM quiz_attempts qa
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM quiz_attempt_usages usage
+      WHERE usage.quiz_attempt_id = qa.id
+         OR (
+           qa.live_session_id IS NOT NULL
+           AND usage.live_session_id = qa.live_session_id
+           AND usage.participant_id = qa.participant_id
+         )
+    )
     ON CONFLICT (quiz_attempt_id) DO NOTHING;
   `);
 }
