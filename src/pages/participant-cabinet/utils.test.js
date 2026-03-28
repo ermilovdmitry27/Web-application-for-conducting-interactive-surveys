@@ -79,12 +79,14 @@ describe("participant-cabinet/utils", () => {
     expect(getGroupedAttempts([firstAttempt, secondAttempt, thirdAttempt], "classic")).toEqual([
       {
         key: "classic-10",
+        quizId: 10,
         title: "Science Quiz",
         avatarChar: "S",
         attempts: [firstAttempt, secondAttempt],
       },
       {
         key: "classic-live-session",
+        quizId: null,
         title: "Live Session",
         avatarChar: "L",
         attempts: [thirdAttempt],

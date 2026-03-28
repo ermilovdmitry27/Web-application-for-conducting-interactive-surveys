@@ -32,6 +32,7 @@ export default function QuestionCard({
         <div className={styles.inlineControls}>
           <select
             className={styles.inputCompact}
+            aria-label={`Тип вопроса ${questionIndex + 1}`}
             value={question.type}
             onChange={(event) =>
               onQuestionField(questionIndex, "type", event.target.value)
@@ -43,6 +44,7 @@ export default function QuestionCard({
 
           <select
             className={styles.inputCompact}
+            aria-label={`Режим ответа ${questionIndex + 1}`}
             value={question.answerMode}
             onChange={(event) =>
               onAnswerModeChange(questionIndex, event.target.value)
@@ -81,6 +83,7 @@ export default function QuestionCard({
                 className={styles.hiddenFileInput}
                 type="file"
                 accept={QUESTION_IMAGE_ACCEPT}
+                aria-label={`Загрузить изображение вопроса ${questionIndex + 1}`}
                 onChange={(event) => onQuestionImageSelected(questionIndex, event)}
                 disabled={isUploadingImage || isSubmitting}
               />

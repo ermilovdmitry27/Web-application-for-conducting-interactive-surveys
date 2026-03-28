@@ -18,7 +18,7 @@ export default function ParticipantQuizPage() {
   const navigate = useNavigate();
   const { joinCode: rawJoinCode = "" } = useParams();
   const joinCode = String(rawJoinCode).trim().toUpperCase();
-  const user = getStoredUser();
+  const [user] = useState(() => getStoredUser());
   const apiBaseUrl = getApiBaseUrl();
 
   const [session, setSession] = useState(null);
@@ -39,6 +39,13 @@ export default function ParticipantQuizPage() {
   const [wsReconnectVersion, setWsReconnectVersion] = useState(0);
 
   const wsRef = useRef(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const refreshLeaderboard = useCallback(
     async (sessionId) => {
@@ -50,7 +57,9 @@ export default function ParticipantQuizPage() {
           `${apiBaseUrl}/api/live-sessions/${sessionId}/leaderboard`,
           { method: "GET" }
         );
-        setLeaderboard(data?.leaderboard || null);
+        if (isMountedRef.current) {
+          setLeaderboard(data?.leaderboard || null);
+        }
       } catch (_error) {
         // silent fallback: leaderboard may arrive via websocket event
       }
@@ -66,6 +75,9 @@ export default function ParticipantQuizPage() {
       const data = await requestWithAuth(`${apiBaseUrl}/api/live-sessions/${sessionId}/state`, {
         method: "GET",
       });
+      if (!isMountedRef.current) {
+        return;
+      }
       if (data?.session) {
         setSession(data.session);
       }
@@ -375,7 +387,7 @@ export default function ParticipantQuizPage() {
     ? `Осталось попыток: ${attemptsInfo.remaining}`
     : `WS: ${wsStatus}`;
 
-  const handleOptionToggle = (optionId, checked) => {
+  const handleOptionToggle = useCallback((optionId, checked) => {
     if (!currentQuestion || !isRunning) {
       return;
     }
@@ -390,9 +402,9 @@ export default function ParticipantQuizPage() {
       }
       return prev.filter((value) => value !== optionId);
     });
-  };
+  }, [currentQuestion, isRunning]);
 
-  const handleSubmitAnswer = async (event) => {
+  const handleSubmitAnswer = useCallback(async (event) => {
     event.preventDefault();
     if (!currentQuestion || !session?.sessionId) {
       return;
@@ -414,6 +426,9 @@ export default function ParticipantQuizPage() {
           optionIds: selectedOptionIds,
         }),
       });
+      if (!isMountedRef.current) {
+        return;
+      }
       setSubmittedQuestionIndex(currentQuestion.index);
       const canShowResult =
         Boolean(data?.showCorrectAfterAnswer) && typeof data?.isCorrect === "boolean";
@@ -431,17 +446,35 @@ export default function ParticipantQuizPage() {
         );
       }
     } catch (error) {
-      setActionError(error.message || "Не удалось отправить ответ.");
+      if (isMountedRef.current) {
+        setActionError(error.message || "Не удалось отправить ответ.");
+      }
     } finally {
-      setIsSubmitting(false);
+      if (isMountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
-  };
+  }, [
+    allowAnswerChanges,
+    apiBaseUrl,
+    currentQuestion,
+    isQuestionAnswered,
+    selectedOptionIds,
+    session?.sessionId,
+  ]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("auth_user");
     navigate("/login", { replace: true });
-  };
+  }, [navigate]);
+
+  const handleRefreshLeaderboard = useCallback(() => {
+    if (!session?.sessionId) {
+      return;
+    }
+    refreshLeaderboard(session.sessionId);
+  }, [refreshLeaderboard, session?.sessionId]);
 
   const myLeaderboardPlace = useMemo(() => {
     if (!leaderboard || !Array.isArray(leaderboard.entries)) {
@@ -555,7 +588,7 @@ export default function ParticipantQuizPage() {
                     isPaused={session.isPaused}
                     wsStatus={wsStatus}
                     attemptsInfo={attemptsInfo}
-                    onRefreshLeaderboard={() => refreshLeaderboard(session.sessionId)}
+                    onRefreshLeaderboard={handleRefreshLeaderboard}
                   />
                 )}
 
@@ -571,7 +604,7 @@ export default function ParticipantQuizPage() {
                     questionRemainingSeconds={questionRemainingSeconds}
                     questionTimeLimitSeconds={session.questionTimeLimitSeconds}
                     myLeaderboardPlace={myLeaderboardPlace}
-                    onRefreshLeaderboard={() => refreshLeaderboard(session.sessionId)}
+                    onRefreshLeaderboard={handleRefreshLeaderboard}
                   />
                 )}
               </section>

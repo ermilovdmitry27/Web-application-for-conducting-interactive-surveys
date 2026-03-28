@@ -186,74 +186,11 @@
   background: var(--menu-hover);
 }
 
-.menuItemButtonActive {
-  background: var(--menu-hover);
-}
-
 .menuIcon {
   width: 18px;
   height: 18px;
   color: var(--primary);
   flex-shrink: 0;
-}
-
-.settingsPanel {
-  margin-top: 12px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--secondary-bg);
-  display: grid;
-  gap: 12px;
-}
-
-.settingsLabel {
-  margin: 0;
-  color: var(--text);
-  font-family: var(--font-heading);
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.themeSwitch {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.themeOption {
-  min-height: 46px;
-  padding: 0 14px;
-  border-radius: 14px;
-  border: 1px solid var(--line-strong);
-  background: var(--shell-bg-soft);
-  color: var(--text);
-  font-family: var(--font-label);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.themeOption:hover {
-  background: var(--menu-hover);
-}
-
-.themeOptionActive {
-  color: #ffffff;
-  border-color: transparent;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
-  box-shadow: 0 14px 24px rgba(37, 99, 235, 0.14);
-}
-
-.themeHint {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.6;
 }
 
 .profileAvatarRow {
@@ -2742,7 +2679,6 @@
   }
 
   .profileUser,
-  .themeHint,
   .profilePanelHint,
   .profileMediaHint,
   .profileFormHint,

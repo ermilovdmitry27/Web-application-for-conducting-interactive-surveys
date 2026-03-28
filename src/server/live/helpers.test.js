@@ -221,6 +221,21 @@ describe("server/live/helpers", () => {
     });
   });
 
+  test("buildLiveStatePair falls back to participants length when context has no participantsCount", () => {
+    const result = buildLiveStatePair(
+      {
+        session,
+        quiz,
+      },
+      [{ participantId: 1 }, { participantId: 2 }],
+      [{ participantId: 2 }]
+    );
+
+    expect(result.organizerState.participantsCount).toBe(2);
+    expect(result.participantState.participantsCount).toBe(2);
+    expect(result.organizerState.currentQuestionAnswersCount).toBe(1);
+  });
+
   test("buildLiveAttemptAnswers shapes answers using session order and selected option texts", () => {
     expect(
       buildLiveAttemptAnswers(

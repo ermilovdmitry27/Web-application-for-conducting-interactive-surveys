@@ -1,7 +1,8 @@
+import { memo } from "react";
 import styles from "../../css/CabinetPage.module.css";
 import { resolveApiAssetUrl } from "../../lib/api/config";
 
-export default function ActiveQuestionForm({
+function ActiveQuestionForm({
   currentQuestion,
   isPaused,
   selectedOptionIds,
@@ -76,3 +77,5 @@ export default function ActiveQuestionForm({
     </form>
   );
 }
+
+export default memo(ActiveQuestionForm);

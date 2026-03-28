@@ -4,6 +4,7 @@
   z-index: 1;
 }
 
+.routeFallback,
 .notFoundPage {
   min-height: 100vh;
   display: flex;
@@ -12,6 +13,7 @@
   padding: 24px;
 }
 
+.routeFallbackCard,
 .notFoundCard {
   width: min(760px, 100%);
   padding: clamp(30px, 5vw, 52px);
@@ -22,6 +24,7 @@
   backdrop-filter: blur(16px);
 }
 
+.routeFallbackLabel,
 .notFoundEyebrow {
   margin: 0;
   color: var(--primary);
@@ -32,6 +35,7 @@
   text-transform: uppercase;
 }
 
+.routeFallbackTitle,
 .notFoundTitle {
   margin: 16px 0 0;
   color: var(--text);
@@ -41,6 +45,7 @@
   letter-spacing: -0.05em;
 }
 
+.routeFallbackText,
 .notFoundText {
   margin: 20px 0 0;
   max-width: 40ch;
@@ -69,20 +74,24 @@
 }
 
 @media (max-width: 640px) {
+  .routeFallbackCard,
   .notFoundCard {
     padding: 22px 18px;
   }
 
+  .routeFallbackLabel,
   .notFoundEyebrow,
   .notFoundLink {
     font-size: 9px;
     letter-spacing: 0.1em;
   }
 
+  .routeFallbackTitle,
   .notFoundTitle {
     font-size: clamp(30px, 9vw, 42px);
   }
 
+  .routeFallbackText,
   .notFoundText {
     font-size: 15px;
     line-height: 1.62;

@@ -1,7 +1,8 @@
+import { memo } from "react";
 import styles from "../../css/CabinetPage.module.css";
 import { formatSeconds, getLiveStatusLabel } from "./utils";
 
-export default function LiveSidebar({
+function LiveSidebar({
   sessionStatus,
   isPaused,
   wsStatus,
@@ -78,3 +79,5 @@ export default function LiveSidebar({
     </aside>
   );
 }
+
+export default memo(LiveSidebar);

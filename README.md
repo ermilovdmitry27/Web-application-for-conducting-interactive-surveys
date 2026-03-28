@@ -160,6 +160,28 @@ npm run verify
 - `node --check server/db.js`
 - production build frontend-а
 
+Для полного CI-подобного прогона используйте:
+
+```bash
+npm run verify:ci
+```
+
+`verify:ci` выполняет:
+
+- `npm run verify`
+- `npm run lint`
+- `npm run test:unit`
+- `npm run test:integration`
+- `npm run test:e2e`
+
+Для отдельного browser smoke-прогона используйте:
+
+```bash
+npm run test:e2e
+```
+
+По умолчанию Playwright запускается на системном Chromium. При необходимости путь можно переопределить через `PLAYWRIGHT_CHROMIUM_PATH`.
+
 ### 3. Запустите frontend и backend вместе
 
 ```bash

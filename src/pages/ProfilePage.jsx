@@ -18,14 +18,22 @@ import {
 export default function ProfilePage() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-  const [user, setUser] = useState(() => buildNormalizedUser(getStoredUser()));
-  const [form, setForm] = useState(() => ({
-    firstName: buildNormalizedUser(getStoredUser()).firstName,
-    lastName: buildNormalizedUser(getStoredUser()).lastName,
-    middleName: buildNormalizedUser(getStoredUser()).middleName,
-    email: buildNormalizedUser(getStoredUser()).email,
-  }));
-  const [avatarSrc, setAvatarSrc] = useState(() => buildNormalizedUser(getStoredUser()).avatarDataUrl || "");
+  const [initialProfileState] = useState(() => {
+    const initialUser = buildNormalizedUser(getStoredUser());
+    return {
+      user: initialUser,
+      form: {
+        firstName: initialUser.firstName,
+        lastName: initialUser.lastName,
+        middleName: initialUser.middleName,
+        email: initialUser.email,
+      },
+      avatarSrc: initialUser.avatarDataUrl || "",
+    };
+  });
+  const [user, setUser] = useState(() => initialProfileState.user);
+  const [form, setForm] = useState(() => initialProfileState.form);
+  const [avatarSrc, setAvatarSrc] = useState(() => initialProfileState.avatarSrc);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [formError, setFormError] = useState("");
@@ -257,6 +265,7 @@ export default function ProfilePage() {
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
+                  aria-label="Выбрать фото профиля"
                   className={styles.hiddenFileInput}
                   onChange={handleAvatarChange}
                 />

@@ -47,6 +47,7 @@ export default function WorkspaceHeroSection({
               <input
                 className={styles.workspaceHeroCommandInput}
                 type="text"
+                aria-label="Код комнаты"
                 value={joinCode}
                 onChange={onJoinCodeChange}
                 placeholder="Например A1B2C3"

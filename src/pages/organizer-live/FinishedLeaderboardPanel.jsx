@@ -1,6 +1,7 @@
+import { memo } from "react";
 import styles from "../../css/CabinetPage.module.css";
 
-export default function FinishedLeaderboardPanel({ leaderboard }) {
+function FinishedLeaderboardPanel({ leaderboard }) {
   return (
     <div className={styles.liveResultBoard}>
       <div className={styles.liveResultHeader}>
@@ -46,3 +47,5 @@ export default function FinishedLeaderboardPanel({ leaderboard }) {
     </div>
   );
 }
+
+export default memo(FinishedLeaderboardPanel);

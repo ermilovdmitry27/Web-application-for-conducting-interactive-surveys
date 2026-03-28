@@ -1,6 +1,7 @@
+import { memo } from "react";
 import styles from "../../css/CabinetPage.module.css";
 
-export default function LiveQueuePanel() {
+function LiveQueuePanel() {
   return (
     <div className={styles.liveStatePanel}>
       <h2 className={styles.liveStageTitle}>Ожидайте следующий вопрос.</h2>
@@ -10,3 +11,5 @@ export default function LiveQueuePanel() {
     </div>
   );
 }
+
+export default memo(LiveQueuePanel);

@@ -6,14 +6,17 @@ const {
 } = require("./helpers");
 const { getLiveRuntimeData } = require("./runtime");
 const {
-  getLiveSessionContextById,
+  getLiveRuntimeContextById,
 } = require("./context");
 const { getLiveLeaderboard } = require("./leaderboard");
-const { saveFinishedLiveSessionResults } = require("./results");
+const {
+  getFinishedLiveSessionResultsSnapshot,
+  saveFinishedLiveSessionResults,
+} = require("./results");
 
 function createLiveTransitionHelpers({ pool, broadcastToRoom }) {
   async function startLiveSessionAndGetPayload(sessionId) {
-    const context = await getLiveSessionContextById(sessionId);
+    const context = await getLiveRuntimeContextById(sessionId);
     if (!context) {
       return null;
     }
@@ -65,7 +68,7 @@ function createLiveTransitionHelpers({ pool, broadcastToRoom }) {
     );
     const wasUpdated = startResult.rows.length > 0;
 
-    const refreshedContext = await getLiveSessionContextById(sessionId);
+    const refreshedContext = await getLiveRuntimeContextById(sessionId);
     if (!refreshedContext) {
       return null;
     }
@@ -92,7 +95,7 @@ function createLiveTransitionHelpers({ pool, broadcastToRoom }) {
   }
 
   async function pauseLiveSessionAndGetPayload(sessionId) {
-    const context = await getLiveSessionContextById(sessionId);
+    const context = await getLiveRuntimeContextById(sessionId);
     if (!context) {
       return null;
     }
@@ -140,7 +143,7 @@ function createLiveTransitionHelpers({ pool, broadcastToRoom }) {
     );
     const wasUpdated = updateResult.rows.length > 0;
 
-    const refreshedContext = await getLiveSessionContextById(sessionId);
+    const refreshedContext = await getLiveRuntimeContextById(sessionId);
     if (!refreshedContext) {
       return null;
     }
@@ -167,7 +170,7 @@ function createLiveTransitionHelpers({ pool, broadcastToRoom }) {
   }
 
   async function resumeLiveSessionAndGetPayload(sessionId) {
-    const context = await getLiveSessionContextById(sessionId);
+    const context = await getLiveRuntimeContextById(sessionId);
     if (!context) {
       return null;
     }
@@ -214,7 +217,7 @@ function createLiveTransitionHelpers({ pool, broadcastToRoom }) {
     );
     const wasUpdated = updateResult.rows.length > 0;
 
-    const refreshedContext = await getLiveSessionContextById(sessionId);
+    const refreshedContext = await getLiveRuntimeContextById(sessionId);
     if (!refreshedContext) {
       return null;
     }
@@ -241,52 +244,61 @@ function createLiveTransitionHelpers({ pool, broadcastToRoom }) {
   }
 
   async function finishLiveSessionAndGetPayload(sessionId) {
-    const finishResult = await pool.query(
-      `
-      UPDATE quiz_sessions
-      SET status = 'finished', finished_at = NOW()
-      WHERE id = $1 AND status = 'running'
-      RETURNING id;
-      `,
-      [sessionId]
-    );
-    const wasUpdated = finishResult.rows.length > 0;
+    const client = await pool.connect();
 
-    if (wasUpdated) {
-      await saveFinishedLiveSessionResults(sessionId);
+    try {
+      await client.query("BEGIN");
+
+      const finishResult = await client.query(
+        `
+        UPDATE quiz_sessions
+        SET status = 'finished', finished_at = NOW()
+        WHERE id = $1 AND status = 'running'
+        RETURNING id;
+        `,
+        [sessionId]
+      );
+      const wasUpdated = finishResult.rows.length > 0;
+
+      const resultsSnapshot = wasUpdated
+        ? await saveFinishedLiveSessionResults(sessionId, { db: client })
+        : await getFinishedLiveSessionResultsSnapshot(sessionId, { db: client });
+      if (!resultsSnapshot?.context) {
+        await client.query("ROLLBACK");
+        return null;
+      }
+
+      const states = buildLiveStatePair(resultsSnapshot.context, resultsSnapshot.participants, []);
+      await client.query("COMMIT");
+
+      if (wasUpdated) {
+        broadcastToRoom(`live:${sessionId}`, {
+          type: "live:session-finished",
+          session: states.participantState,
+          leaderboard: resultsSnapshot.leaderboard,
+        });
+      }
+
+      return {
+        ...states,
+        context: resultsSnapshot.context,
+        leaderboard: resultsSnapshot.leaderboard,
+        wasUpdated,
+      };
+    } catch (error) {
+      try {
+        await client.query("ROLLBACK");
+      } catch (rollbackError) {
+        console.error("finishLiveSessionAndGetPayload rollback failed:", rollbackError);
+      }
+      throw error;
+    } finally {
+      client.release();
     }
-
-    const finishedContext = await getLiveSessionContextById(sessionId);
-    if (!finishedContext) {
-      return null;
-    }
-
-    const leaderboard = await getLiveLeaderboard(sessionId);
-    const runtime = await getLiveRuntimeData(finishedContext);
-    const states = buildLiveStatePair(
-      finishedContext,
-      runtime.participants,
-      runtime.answeredParticipants
-    );
-
-    if (wasUpdated) {
-      broadcastToRoom(`live:${sessionId}`, {
-        type: "live:session-finished",
-        session: states.participantState,
-        leaderboard,
-      });
-    }
-
-    return {
-      ...states,
-      context: finishedContext,
-      leaderboard,
-      wasUpdated,
-    };
   }
 
   async function advanceLiveSessionQuestion(sessionId) {
-    const context = await getLiveSessionContextById(sessionId);
+    const context = await getLiveRuntimeContextById(sessionId);
     if (!context) {
       return null;
     }
@@ -324,7 +336,7 @@ function createLiveTransitionHelpers({ pool, broadcastToRoom }) {
       [sessionId, nextQuestionIndex, context.session.currentQuestionIndex]
     );
 
-    const refreshedContext = await getLiveSessionContextById(sessionId);
+    const refreshedContext = await getLiveRuntimeContextById(sessionId);
     if (!refreshedContext) {
       return null;
     }

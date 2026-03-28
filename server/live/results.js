@@ -1,24 +1,29 @@
 const { pool } = require("../db");
+const { recordLiveAttemptUsages } = require("../attempts/usage");
 const { buildLiveAttemptAnswers, getLiveAttemptTimeSpentSeconds } = require("./helpers");
-const { getLiveSessionContextById } = require("./context");
-const { getLiveLeaderboard } = require("./leaderboard");
-const { getLiveParticipants } = require("./runtime");
+const { getLiveLeaderboardSnapshot } = require("./leaderboard");
 
-async function saveFinishedLiveSessionResults(sessionId) {
-  const context = await getLiveSessionContextById(sessionId);
-  if (!context) {
-    return;
+async function getFinishedLiveSessionResultsSnapshot(
+  sessionId,
+  { db = pool, leaderboardSnapshot = null } = {}
+) {
+  const resolvedLeaderboardSnapshot =
+    leaderboardSnapshot || await getLiveLeaderboardSnapshot(sessionId, { db });
+  if (!resolvedLeaderboardSnapshot) {
+    return null;
   }
-  const leaderboard = await getLiveLeaderboard(sessionId);
+
+  const { context, participants, leaderboard } = resolvedLeaderboardSnapshot;
   if (!leaderboard || leaderboard.entries.length === 0) {
-    return;
+    return {
+      context,
+      participants,
+      leaderboard,
+      attemptRowsForUpsert: [],
+    };
   }
 
-  const participantList = await getLiveParticipants(sessionId);
-  const participantMap = new Map(
-    participantList.map((participant) => [participant.participantId, participant])
-  );
-  const answerRowsResult = await pool.query(
+  const answerRowsResult = await db.query(
     `
     SELECT
       participant_id,
@@ -29,10 +34,11 @@ async function saveFinishedLiveSessionResults(sessionId) {
       submitted_after_seconds
     FROM quiz_session_answers
     WHERE session_id = $1
-    ORDER BY participant_id ASC, question_index ASC, submitted_at ASC;
+    ORDER BY participant_id ASC, question_index ASC;
     `,
     [sessionId]
   );
+
   const answerRowsByParticipant = new Map();
   answerRowsResult.rows.forEach((row) => {
     const participantId = Number(row.participant_id);
@@ -42,8 +48,11 @@ async function saveFinishedLiveSessionResults(sessionId) {
     answerRowsByParticipant.get(participantId).push(row);
   });
 
+  const participantMap = new Map(
+    participants.map((participant) => [participant.participantId, participant])
+  );
   const totalQuestionCount = leaderboard.maxScore;
-  for (const entry of leaderboard.entries) {
+  const attemptRowsForUpsert = leaderboard.entries.map((entry) => {
     const participant = participantMap.get(entry.participantId) || null;
     const participantAnswerRows = answerRowsByParticipant.get(entry.participantId) || [];
     const answersForStorage = buildLiveAttemptAnswers(context, participantAnswerRows);
@@ -53,40 +62,109 @@ async function saveFinishedLiveSessionResults(sessionId) {
       participantAnswerRows
     );
 
-    await pool.query(
-      `
-      INSERT INTO quiz_attempts (
-        quiz_id,
-        participant_id,
-        answers_json,
-        score,
-        max_score,
-        time_spent_seconds,
-        live_session_id
-      )
-      VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7)
-      ON CONFLICT (live_session_id, participant_id)
-      WHERE live_session_id IS NOT NULL
-      DO UPDATE
-      SET
-        answers_json = EXCLUDED.answers_json,
-        score = EXCLUDED.score,
-        max_score = EXCLUDED.max_score,
-        time_spent_seconds = EXCLUDED.time_spent_seconds;
-      `,
-      [
-        context.quiz.id,
-        entry.participantId,
-        JSON.stringify(answersForStorage),
-        entry.score,
-        totalQuestionCount,
-        timeSpentSeconds,
-        sessionId,
-      ]
-    );
+    return {
+      quizId: context.quiz.id,
+      participantId: entry.participantId,
+      answersJson: answersForStorage,
+      score: entry.score,
+      maxScore: totalQuestionCount,
+      timeSpentSeconds,
+      liveSessionId: sessionId,
+    };
+  });
+
+  return {
+    context,
+    participants,
+    leaderboard,
+    attemptRowsForUpsert,
+  };
+}
+
+async function saveFinishedLiveSessionResults(
+  sessionId,
+  { db = pool, snapshot = null } = {}
+) {
+  const resolvedSnapshot =
+    snapshot || await getFinishedLiveSessionResultsSnapshot(sessionId, { db });
+  if (!resolvedSnapshot) {
+    return null;
   }
+
+  if (resolvedSnapshot.attemptRowsForUpsert.length === 0) {
+    return resolvedSnapshot;
+  }
+
+  await db.query(
+    `
+    WITH attempt_payload AS (
+      SELECT *
+      FROM jsonb_to_recordset($1::jsonb) AS payload(
+        quiz_id bigint,
+        participant_id bigint,
+        answers_json jsonb,
+        score integer,
+        max_score integer,
+        time_spent_seconds integer,
+        live_session_id bigint
+      )
+    )
+    INSERT INTO quiz_attempts (
+      quiz_id,
+      participant_id,
+      answers_json,
+      score,
+      max_score,
+      time_spent_seconds,
+      live_session_id
+    )
+    SELECT
+      quiz_id,
+      participant_id,
+      answers_json,
+      score,
+      max_score,
+      time_spent_seconds,
+      live_session_id
+    FROM attempt_payload
+    ON CONFLICT (live_session_id, participant_id)
+    WHERE live_session_id IS NOT NULL
+    DO UPDATE
+    SET
+      answers_json = EXCLUDED.answers_json,
+      score = EXCLUDED.score,
+      max_score = EXCLUDED.max_score,
+      time_spent_seconds = EXCLUDED.time_spent_seconds;
+    `,
+    [
+      JSON.stringify(
+        resolvedSnapshot.attemptRowsForUpsert.map((row) => ({
+          quiz_id: row.quizId,
+          participant_id: row.participantId,
+          answers_json: row.answersJson,
+          score: row.score,
+          max_score: row.maxScore,
+          time_spent_seconds: row.timeSpentSeconds,
+          live_session_id: row.liveSessionId,
+        }))
+      ),
+    ]
+  );
+
+  await recordLiveAttemptUsages(
+    resolvedSnapshot.attemptRowsForUpsert.map((row) => ({
+      quizId: row.quizId,
+      participantId: row.participantId,
+      liveSessionId: row.liveSessionId,
+      createdAt: resolvedSnapshot.context?.session?.finishedAt || null,
+    })),
+    db
+  );
+
+  return resolvedSnapshot;
 }
 
 module.exports = {
+  getFinishedLiveSessionResultsSnapshot,
   saveFinishedLiveSessionResults,
 };

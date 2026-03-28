@@ -1,6 +1,7 @@
+import { memo } from "react";
 import styles from "../../css/CabinetPage.module.css";
 
-export default function LiveLobbyPanel({ participants }) {
+function LiveLobbyPanel({ participants }) {
   return (
     <div className={styles.liveStatePanel}>
       <h2 className={styles.liveStageTitle}>Комната открыта для участников.</h2>
@@ -26,3 +27,5 @@ export default function LiveLobbyPanel({ participants }) {
     </div>
   );
 }
+
+export default memo(LiveLobbyPanel);

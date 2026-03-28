@@ -10,7 +10,6 @@ const WebSocketServer = WebSocketLib.WebSocketServer || WebSocketLib.Server;
 const multer = require("multer");
 const {
   port,
-  corsOrigin,
   jsonBodyLimit,
   wsPath,
   wsHeartbeatMs,
@@ -21,18 +20,13 @@ const {
   MAX_QUIZ_TITLE_LENGTH,
   MAX_QUIZ_DESCRIPTION_LENGTH,
   MAX_QUIZ_CATEGORY_LENGTH,
-  MAX_QUIZ_QUESTIONS,
   MAX_QUIZ_DURATION_MINUTES,
   MIN_QUIZ_QUESTION_TIME_SECONDS,
   MAX_QUIZ_QUESTION_TIME_SECONDS,
   DEFAULT_QUIZ_QUESTION_TIME_SECONDS,
   MAX_QUIZ_ATTEMPTS_PER_PARTICIPANT,
-  MAX_QUESTION_TEXT_LENGTH,
-  MAX_OPTION_TEXT_LENGTH,
-  MAX_QUESTION_OPTIONS,
   MAX_QUESTION_IMAGE_FILE_SIZE,
   MAX_QUESTION_IMAGE_FILE_SIZE_MB,
-  isDefaultJwtSecret,
 } = require("./config/env");
 const {
   EMAIL_RE,
@@ -46,11 +40,12 @@ const {
   authenticate,
   requireRole,
 } = require("./auth/helpers");
-const { pool, dbConfig } = require("./db");
+const { pool } = require("./db");
 const {
   ensureUsersTable,
   ensureQuizzesTable,
   ensureQuizAttemptsTable,
+  ensureQuizAttemptUsagesTable,
   ensureLiveSessionsTable,
   ensureLiveSessionParticipantsTable,
   ensureLiveSessionAnswersTable,
@@ -62,25 +57,26 @@ const {
   createWsRoomHelpers,
 } = require("./websocket/helpers");
 const {
-  buildDefaultQuestionOrder,
-  normalizeQuestionOrder,
   createLiveQuestionOrder,
   getLiveQuestionBySessionIndex,
   getLiveQuestionTimeLimitSeconds,
   getLiveQuestionRemainingSeconds,
   getLiveQuestionResponseSeconds,
-  toLiveQuestionPayload,
   buildLiveSessionState,
   buildLiveStatePair,
 } = require("./live/helpers");
 const {
+  getUsedQuizAttemptsCount,
+  recordClassicAttemptUsage,
+} = require("./attempts/usage");
+const {
   getLiveParticipants,
-  getLiveAnsweredParticipants,
   getLiveRuntimeData,
 } = require("./live/runtime");
 const {
   getLiveSessionContextById,
-  getRunningSessionContextByJoinCode,
+  getLiveRuntimeContextById,
+  getRunningSessionRuntimeContextByJoinCode,
 } = require("./live/context");
 const { getLiveLeaderboard } = require("./live/leaderboard");
 const { createLiveTransitionHelpers } = require("./live/transitions");
@@ -132,10 +128,6 @@ function applySecurityHeaders(_req, res, next) {
 }
 
 function getRequestIp(req) {
-  const forwardedFor = req.headers["x-forwarded-for"];
-  if (typeof forwardedFor === "string" && forwardedFor.trim()) {
-    return forwardedFor.split(",")[0].trim();
-  }
   return req.ip || req.socket?.remoteAddress || "unknown";
 }
 
@@ -972,7 +964,7 @@ app.post("/api/quizzes/:quizId/live/start", authenticate, requireRole("organizer
       isNewSession = true;
     }
 
-    const context = await getLiveSessionContextById(sessionId);
+    const context = await getLiveRuntimeContextById(sessionId);
     if (!context) {
       return res.status(404).json({ message: "Не удалось получить состояние live-сессии." });
     }
@@ -998,7 +990,7 @@ app.post("/api/live-sessions/:sessionId/start", authenticate, requireRole("organ
       return res.status(400).json({ message: "Некорректный id live-сессии." });
     }
 
-    const context = await getLiveSessionContextById(sessionId);
+    const context = await getLiveRuntimeContextById(sessionId);
     if (!context) {
       return res.status(404).json({ message: "Live-сессия не найдена." });
     }
@@ -1027,7 +1019,7 @@ app.post("/api/live-sessions/:sessionId/pause", authenticate, requireRole("organ
       return res.status(400).json({ message: "Некорректный id live-сессии." });
     }
 
-    const context = await getLiveSessionContextById(sessionId);
+    const context = await getLiveRuntimeContextById(sessionId);
     if (!context) {
       return res.status(404).json({ message: "Live-сессия не найдена." });
     }
@@ -1056,7 +1048,7 @@ app.post("/api/live-sessions/:sessionId/resume", authenticate, requireRole("orga
       return res.status(400).json({ message: "Некорректный id live-сессии." });
     }
 
-    const context = await getLiveSessionContextById(sessionId);
+    const context = await getLiveRuntimeContextById(sessionId);
     if (!context) {
       return res.status(404).json({ message: "Live-сессия не найдена." });
     }
@@ -1086,20 +1078,12 @@ app.post("/api/live/join", authenticate, requireRole("participant"), async (req,
       return res.status(400).json({ message: "Введите код комнаты." });
     }
 
-    const context = await getRunningSessionContextByJoinCode(joinCode);
+    const context = await getRunningSessionRuntimeContextByJoinCode(joinCode);
     if (!context) {
       return res.status(404).json({ message: "Активная live-сессия с таким кодом не найдена." });
     }
 
-    const attemptsCountResult = await pool.query(
-      `
-      SELECT COUNT(*)::int AS total
-      FROM quiz_attempts
-      WHERE quiz_id = $1 AND participant_id = $2;
-      `,
-      [context.quiz.id, req.auth.sub]
-    );
-    const attemptsUsed = Number(attemptsCountResult.rows[0]?.total || 0);
+    const attemptsUsed = await getUsedQuizAttemptsCount(context.quiz.id, req.auth.sub);
     const attemptsLimit = Number(context.quiz.maxAttemptsPerParticipant || 1);
     if (attemptsUsed >= attemptsLimit) {
       return res.status(403).json({
@@ -1116,7 +1100,7 @@ app.post("/api/live/join", authenticate, requireRole("participant"), async (req,
       [context.session.id, req.auth.sub]
     );
 
-    const refreshedContext = await getLiveSessionContextById(context.session.id);
+    const refreshedContext = await getLiveRuntimeContextById(context.session.id);
     if (!refreshedContext) {
       return res.status(404).json({ message: "Live-сессия не найдена." });
     }
@@ -1125,7 +1109,7 @@ app.post("/api/live/join", authenticate, requireRole("participant"), async (req,
     const participantSessionState = buildLiveSessionState({
       session: refreshedContext.session,
       quiz: refreshedContext.quiz,
-      participantsCount: refreshedContext.participantsCount,
+      participantsCount: participants.length,
       participants: [],
       answeredParticipants: [],
       includeCorrect: false,
@@ -1134,7 +1118,7 @@ app.post("/api/live/join", authenticate, requireRole("participant"), async (req,
     broadcastToRoom(`live:${refreshedContext.session.id}`, {
       type: "live:participants-updated",
       sessionId: refreshedContext.session.id,
-      participantsCount: refreshedContext.participantsCount,
+      participantsCount: participants.length,
       participants,
     });
 
@@ -1157,7 +1141,7 @@ app.post("/api/live-sessions/:sessionId/answer", authenticate, requireRole("part
       return res.status(400).json({ message: "Некорректный id live-сессии." });
     }
 
-    const context = await getLiveSessionContextById(sessionId);
+    const context = await getLiveRuntimeContextById(sessionId);
     if (!context) {
       return res.status(404).json({ message: "Live-сессия не найдена." });
     }
@@ -1185,15 +1169,7 @@ app.post("/api/live-sessions/:sessionId/answer", authenticate, requireRole("part
       });
     }
 
-    const attemptsCountResult = await pool.query(
-      `
-      SELECT COUNT(*)::int AS total
-      FROM quiz_attempts
-      WHERE quiz_id = $1 AND participant_id = $2;
-      `,
-      [context.quiz.id, req.auth.sub]
-    );
-    const attemptsUsed = Number(attemptsCountResult.rows[0]?.total || 0);
+    const attemptsUsed = await getUsedQuizAttemptsCount(context.quiz.id, req.auth.sub);
     const attemptsLimit = Number(context.quiz.maxAttemptsPerParticipant || 1);
     if (attemptsUsed >= attemptsLimit) {
       return res.status(403).json({
@@ -1263,43 +1239,68 @@ app.post("/api/live-sessions/:sessionId/answer", authenticate, requireRole("part
       submittedAt
     );
 
-    await pool.query(
-      `
-      INSERT INTO quiz_session_answers (
-        session_id,
-        participant_id,
-        question_index,
-        selected_option_ids_json,
-        is_correct,
-        submitted_after_seconds,
-        submitted_at
-      )
-      VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7)
-      ON CONFLICT (session_id, participant_id, question_index)
-      DO UPDATE
-      SET
-        selected_option_ids_json = EXCLUDED.selected_option_ids_json,
-        is_correct = EXCLUDED.is_correct,
-        submitted_after_seconds = EXCLUDED.submitted_after_seconds,
-        submitted_at = EXCLUDED.submitted_at;
-      `,
-      [
-        sessionId,
-        req.auth.sub,
-        questionIndex,
-        JSON.stringify(optionIds),
-        isCorrect,
-        submittedAfterSeconds,
-        submittedAt,
-      ]
-    );
+    const canUpdateExistingAnswer = Boolean(context.quiz.rules?.allowBackNavigation);
+    const answerQuery = canUpdateExistingAnswer
+      ? {
+          sql: `
+            INSERT INTO quiz_session_answers (
+              session_id,
+              participant_id,
+              question_index,
+              selected_option_ids_json,
+              is_correct,
+              submitted_after_seconds,
+              submitted_at
+            )
+            VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7)
+            ON CONFLICT (session_id, participant_id, question_index)
+            DO UPDATE
+            SET
+              selected_option_ids_json = EXCLUDED.selected_option_ids_json,
+              is_correct = EXCLUDED.is_correct,
+              submitted_after_seconds = EXCLUDED.submitted_after_seconds,
+              submitted_at = EXCLUDED.submitted_at
+            RETURNING id;
+          `,
+        }
+      : {
+          sql: `
+            INSERT INTO quiz_session_answers (
+              session_id,
+              participant_id,
+              question_index,
+              selected_option_ids_json,
+              is_correct,
+              submitted_after_seconds,
+              submitted_at
+            )
+            VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7)
+            ON CONFLICT (session_id, participant_id, question_index) DO NOTHING
+            RETURNING id;
+          `,
+        };
+    const answerResult = await pool.query(answerQuery.sql, [
+      sessionId,
+      req.auth.sub,
+      questionIndex,
+      JSON.stringify(optionIds),
+      isCorrect,
+      submittedAfterSeconds,
+      submittedAt,
+    ]);
+    if (!canUpdateExistingAnswer && answerResult.rows.length === 0) {
+      return res.status(409).json({
+        message: "Ответ на этот вопрос уже принят. Изменение ответа отключено организатором.",
+      });
+    }
 
     broadcastToRoom(`user:${context.session.organizerId}`, {
       type: "live:answer-received",
       sessionId,
       participantId: req.auth.sub,
       questionIndex,
-      submittedAt: new Date().toISOString(),
+      submittedAt,
+      submittedAfterSeconds,
     });
 
     return res.status(201).json({
@@ -1321,7 +1322,7 @@ app.post("/api/live-sessions/:sessionId/next", authenticate, requireRole("organi
       return res.status(400).json({ message: "Некорректный id live-сессии." });
     }
 
-    const context = await getLiveSessionContextById(sessionId);
+    const context = await getLiveRuntimeContextById(sessionId);
     if (!context) {
       return res.status(404).json({ message: "Live-сессия не найдена." });
     }
@@ -1354,7 +1355,7 @@ app.post("/api/live-sessions/:sessionId/finish", authenticate, requireRole("orga
       return res.status(400).json({ message: "Некорректный id live-сессии." });
     }
 
-    const context = await getLiveSessionContextById(sessionId);
+    const context = await getLiveRuntimeContextById(sessionId);
     if (!context) {
       return res.status(404).json({ message: "Live-сессия не найдена." });
     }
@@ -1409,22 +1410,17 @@ app.get("/api/live-sessions/:sessionId/state", authenticate, async (req, res) =>
     }
 
     const includeCorrect = req.auth.role === "organizer";
-    const participants =
-      req.auth.role === "organizer" ? await getLiveParticipants(sessionId) : [];
-    const answeredParticipants =
-      req.auth.role === "organizer" &&
-      context.session.status === "running" &&
-      context.session.isLiveStarted &&
-      Number.isInteger(context.session.currentQuestionIndex) &&
-      context.session.currentQuestionIndex >= 0
-        ? await getLiveAnsweredParticipants(sessionId, context.session.currentQuestionIndex)
-        : [];
+    const runtime =
+      req.auth.role === "organizer"
+        ? await getLiveRuntimeData(context)
+        : { participants: [], answeredParticipants: [] };
     const sessionState = buildLiveSessionState({
       session: context.session,
       quiz: context.quiz,
-      participantsCount: context.participantsCount,
-      participants,
-      answeredParticipants,
+      participantsCount:
+        req.auth.role === "organizer" ? runtime.participants.length : context.participantsCount,
+      participants: runtime.participants,
+      answeredParticipants: runtime.answeredParticipants,
       includeCorrect,
     });
     const leaderboard =
@@ -1447,7 +1443,7 @@ app.get("/api/live-sessions/:sessionId/leaderboard", authenticate, async (req, r
       return res.status(400).json({ message: "Некорректный id live-сессии." });
     }
 
-    const context = await getLiveSessionContextById(sessionId);
+    const context = await getLiveRuntimeContextById(sessionId);
     if (!context) {
       return res.status(404).json({ message: "Live-сессия не найдена." });
     }
@@ -1518,15 +1514,7 @@ app.post("/api/quizzes/join", authenticate, requireRole("participant"), async (r
     }
 
     const quizForParticipant = mapQuizForParticipant(quizResult.rows[0]);
-    const attemptsCountResult = await pool.query(
-      `
-      SELECT COUNT(*)::int AS total
-      FROM quiz_attempts
-      WHERE quiz_id = $1 AND participant_id = $2;
-      `,
-      [quizForParticipant.id, req.auth.sub]
-    );
-    const attemptsUsed = Number(attemptsCountResult.rows[0]?.total || 0);
+    const attemptsUsed = await getUsedQuizAttemptsCount(quizForParticipant.id, req.auth.sub);
     const attemptsLimit = Number(quizForParticipant.maxAttemptsPerParticipant || 1);
     if (attemptsUsed >= attemptsLimit) {
       return res.status(403).json({
@@ -1584,15 +1572,7 @@ app.post("/api/quizzes/:quizId/submit", authenticate, requireRole("participant")
       return res.status(400).json({ message: "В этом квизе нет вопросов." });
     }
 
-    const attemptsCountResult = await pool.query(
-      `
-      SELECT COUNT(*)::int AS total
-      FROM quiz_attempts
-      WHERE quiz_id = $1 AND participant_id = $2;
-      `,
-      [quiz.id, req.auth.sub]
-    );
-    const attemptsUsed = Number(attemptsCountResult.rows[0]?.total || 0);
+    const attemptsUsed = await getUsedQuizAttemptsCount(quiz.id, req.auth.sub);
     const attemptsLimit = Number(quiz.maxAttemptsPerParticipant || 1);
     if (attemptsUsed >= attemptsLimit) {
       return res.status(403).json({
@@ -1666,6 +1646,12 @@ app.post("/api/quizzes/:quizId/submit", authenticate, requireRole("participant")
         spentSeconds,
       ]
     );
+    await recordClassicAttemptUsage({
+      quizId: quiz.id,
+      participantId: req.auth.sub,
+      quizAttemptId: insertResult.rows[0].id,
+      createdAt: insertResult.rows[0].created_at,
+    });
 
     return res.status(201).json({
       result: {
@@ -2352,6 +2338,7 @@ async function start() {
     await ensureLiveSessionParticipantsTable();
     await ensureLiveSessionAnswersTable();
     await ensureQuizAttemptsTable();
+    await ensureQuizAttemptUsagesTable();
     isServerReady = true;
     server.listen(port,"0.0.0.0", () => {
       console.log(`API server started on http://localhost:${port}`);

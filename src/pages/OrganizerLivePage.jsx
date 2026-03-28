@@ -12,11 +12,101 @@ import LiveHeroSection from "./organizer-live/LiveHeroSection";
 import LiveLobbyPanel from "./organizer-live/LiveLobbyPanel";
 import { getLiveStatusLabel, getStoredUser } from "./organizer-live/utils";
 
+function mergeOrganizerWsSession(prevSession, nextSession, { preserveAnswered = false } = {}) {
+  if (!nextSession) {
+    return prevSession;
+  }
+  if (!prevSession) {
+    return nextSession;
+  }
+
+  return {
+    ...prevSession,
+    ...nextSession,
+    participants: Array.isArray(prevSession.participants) ? prevSession.participants : [],
+    currentQuestionAnsweredParticipants: preserveAnswered
+      ? Array.isArray(prevSession.currentQuestionAnsweredParticipants)
+        ? prevSession.currentQuestionAnsweredParticipants
+        : []
+      : Array.isArray(nextSession.currentQuestionAnsweredParticipants)
+        ? nextSession.currentQuestionAnsweredParticipants
+        : [],
+    currentQuestionAnswersCount: preserveAnswered
+      ? Math.max(0, Number(prevSession.currentQuestionAnswersCount || 0))
+      : Math.max(0, Number(nextSession.currentQuestionAnswersCount || 0)),
+  };
+}
+
+function applyOrganizerAnswerEvent(prevSession, message) {
+  if (!prevSession) {
+    return { nextSession: prevSession, shouldRefresh: false };
+  }
+
+  const messageSessionId = Number(message?.sessionId);
+  const messageQuestionIndex = Number(message?.questionIndex);
+  const participantId = Number(message?.participantId);
+  if (
+    !Number.isInteger(messageSessionId) ||
+    !Number.isInteger(messageQuestionIndex) ||
+    !Number.isInteger(participantId) ||
+    messageSessionId !== Number(prevSession.sessionId) ||
+    messageQuestionIndex !== Number(prevSession.currentQuestionIndex) ||
+    prevSession.status !== "running" ||
+    !prevSession.isLiveStarted
+  ) {
+    return { nextSession: prevSession, shouldRefresh: false };
+  }
+
+  const participants = Array.isArray(prevSession.participants) ? prevSession.participants : [];
+  const participant = participants.find((item) => Number(item.participantId) === participantId);
+  if (!participant) {
+    return { nextSession: prevSession, shouldRefresh: true };
+  }
+
+  const answeredParticipants = Array.isArray(prevSession.currentQuestionAnsweredParticipants)
+    ? prevSession.currentQuestionAnsweredParticipants
+    : [];
+  const nextAnsweredEntry = {
+    participantId,
+    participantName: participant.participantName,
+    participantAvatarDataUrl: participant.participantAvatarDataUrl || "",
+    submittedAt: message?.submittedAt || new Date().toISOString(),
+    submittedAfterSeconds: Math.max(0, Number(message?.submittedAfterSeconds || 0)),
+  };
+  const existingIndex = answeredParticipants.findIndex(
+    (item) => Number(item.participantId) === participantId
+  );
+  const nextAnsweredParticipants =
+    existingIndex >= 0
+      ? answeredParticipants.map((item, index) =>
+          index === existingIndex ? { ...item, ...nextAnsweredEntry } : item
+        )
+      : [...answeredParticipants, nextAnsweredEntry];
+
+  nextAnsweredParticipants.sort((left, right) => {
+    const leftTime = new Date(left.submittedAt || "").getTime();
+    const rightTime = new Date(right.submittedAt || "").getTime();
+    if (leftTime !== rightTime) {
+      return leftTime - rightTime;
+    }
+    return Number(left.participantId || 0) - Number(right.participantId || 0);
+  });
+
+  return {
+    nextSession: {
+      ...prevSession,
+      currentQuestionAnsweredParticipants: nextAnsweredParticipants,
+      currentQuestionAnswersCount: nextAnsweredParticipants.length,
+    },
+    shouldRefresh: false,
+  };
+}
+
 export default function OrganizerLivePage() {
   const navigate = useNavigate();
   const { quizId: rawQuizId = "" } = useParams();
   const quizId = Number(rawQuizId);
-  const user = getStoredUser();
+  const [user] = useState(() => getStoredUser());
   const apiBaseUrl = getApiBaseUrl();
 
   const [session, setSession] = useState(null);
@@ -34,18 +124,37 @@ export default function OrganizerLivePage() {
   const [lastWsEvent, setLastWsEvent] = useState("Нет событий");
 
   const wsRef = useRef(null);
+  const isMountedRef = useRef(true);
+  const leaderboardRefreshVersionRef = useRef(0);
+  const stateRefreshControlRef = useRef({
+    inFlight: false,
+    pendingSessionId: null,
+    requestVersion: 0,
+  });
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const refreshLeaderboard = useCallback(
     async (sessionId) => {
       if (!sessionId) {
         return;
       }
+      const requestVersion = ++leaderboardRefreshVersionRef.current;
       try {
         const data = await requestWithAuth(
           `${apiBaseUrl}/api/live-sessions/${sessionId}/leaderboard`,
           { method: "GET" }
         );
-        setLeaderboard(data?.leaderboard || null);
+        if (
+          isMountedRef.current &&
+          requestVersion === leaderboardRefreshVersionRef.current
+        ) {
+          setLeaderboard(data?.leaderboard || null);
+        }
       } catch (_error) {
         // silent: leaderboard can already be delivered by websocket
       }
@@ -58,14 +167,38 @@ export default function OrganizerLivePage() {
       if (!sessionId) {
         return;
       }
-      const data = await requestWithAuth(`${apiBaseUrl}/api/live-sessions/${sessionId}/state`, {
-        method: "GET",
-      });
-      if (data?.session) {
-        setSession(data.session);
+      const control = stateRefreshControlRef.current;
+      control.pendingSessionId = sessionId;
+
+      if (control.inFlight) {
+        return;
       }
-      if (data?.leaderboard) {
-        setLeaderboard(data.leaderboard);
+
+      control.inFlight = true;
+      try {
+        while (control.pendingSessionId) {
+          const nextSessionId = control.pendingSessionId;
+          control.pendingSessionId = null;
+          const requestVersion = ++control.requestVersion;
+          const data = await requestWithAuth(
+            `${apiBaseUrl}/api/live-sessions/${nextSessionId}/state`,
+            {
+              method: "GET",
+            }
+          );
+
+          if (!isMountedRef.current || requestVersion !== control.requestVersion) {
+            continue;
+          }
+          if (data?.session) {
+            setSession(data.session);
+          }
+          if (data?.leaderboard) {
+            setLeaderboard(data.leaderboard);
+          }
+        }
+      } finally {
+        control.inFlight = false;
       }
     },
     [apiBaseUrl]
@@ -208,9 +341,17 @@ export default function OrganizerLivePage() {
         if (Number(message.sessionId) !== sessionId) {
           return;
         }
-        refreshSessionState(sessionId).catch(() => {
-          // ignore transient sync errors
+        let shouldRefresh = false;
+        setSession((prev) => {
+          const result = applyOrganizerAnswerEvent(prev, message);
+          shouldRefresh = result.shouldRefresh;
+          return result.nextSession;
         });
+        if (shouldRefresh) {
+          refreshSessionState(sessionId).catch(() => {
+            // ignore transient sync errors
+          });
+        }
         return;
       }
 
@@ -223,7 +364,12 @@ export default function OrganizerLivePage() {
         if (Number(message?.session?.sessionId) !== sessionId) {
           return;
         }
-        setSession(message.session);
+        setSession((prev) =>
+          mergeOrganizerWsSession(prev, message.session, {
+            preserveAnswered:
+              message.type === "live:session-paused" || message.type === "live:session-resumed",
+          })
+        );
         if (message.type === "live:question-changed" || message.type === "live:session-started") {
           setLeaderboard(null);
         }
@@ -330,14 +476,21 @@ export default function OrganizerLivePage() {
         `${apiBaseUrl}/api/live-sessions/${session.sessionId}/start`,
         { method: "POST" }
       );
+      if (!isMountedRef.current) {
+        return;
+      }
       if (data?.session) {
         setSession(data.session);
       }
     } catch (error) {
-      setActionError(error.message || "Не удалось запустить live-квиз.");
+      if (isMountedRef.current) {
+        setActionError(error.message || "Не удалось запустить live-квиз.");
+      }
     } finally {
-      setIsActionLoading(false);
-      setActionType("");
+      if (isMountedRef.current) {
+        setIsActionLoading(false);
+        setActionType("");
+      }
     }
   };
 
@@ -353,6 +506,9 @@ export default function OrganizerLivePage() {
         `${apiBaseUrl}/api/live-sessions/${session.sessionId}/next`,
         { method: "POST" }
       );
+      if (!isMountedRef.current) {
+        return;
+      }
       if (data?.session) {
         setSession(data.session);
       }
@@ -360,10 +516,14 @@ export default function OrganizerLivePage() {
         setLeaderboard(data.leaderboard);
       }
     } catch (error) {
-      setActionError(error.message || "Не удалось переключить вопрос.");
+      if (isMountedRef.current) {
+        setActionError(error.message || "Не удалось переключить вопрос.");
+      }
     } finally {
-      setIsActionLoading(false);
-      setActionType("");
+      if (isMountedRef.current) {
+        setIsActionLoading(false);
+        setActionType("");
+      }
     }
   };
 
@@ -379,14 +539,21 @@ export default function OrganizerLivePage() {
         `${apiBaseUrl}/api/live-sessions/${session.sessionId}/pause`,
         { method: "POST" }
       );
+      if (!isMountedRef.current) {
+        return;
+      }
       if (data?.session) {
         setSession(data.session);
       }
     } catch (error) {
-      setActionError(error.message || "Не удалось поставить квиз на паузу.");
+      if (isMountedRef.current) {
+        setActionError(error.message || "Не удалось поставить квиз на паузу.");
+      }
     } finally {
-      setIsActionLoading(false);
-      setActionType("");
+      if (isMountedRef.current) {
+        setIsActionLoading(false);
+        setActionType("");
+      }
     }
   };
 
@@ -402,14 +569,21 @@ export default function OrganizerLivePage() {
         `${apiBaseUrl}/api/live-sessions/${session.sessionId}/resume`,
         { method: "POST" }
       );
+      if (!isMountedRef.current) {
+        return;
+      }
       if (data?.session) {
         setSession(data.session);
       }
     } catch (error) {
-      setActionError(error.message || "Не удалось возобновить квиз.");
+      if (isMountedRef.current) {
+        setActionError(error.message || "Не удалось возобновить квиз.");
+      }
     } finally {
-      setIsActionLoading(false);
-      setActionType("");
+      if (isMountedRef.current) {
+        setIsActionLoading(false);
+        setActionType("");
+      }
     }
   };
 
@@ -425,15 +599,22 @@ export default function OrganizerLivePage() {
         `${apiBaseUrl}/api/live-sessions/${session.sessionId}/finish`,
         { method: "POST" }
       );
+      if (!isMountedRef.current) {
+        return;
+      }
       if (data?.session) {
         setSession(data.session);
       }
       setLeaderboard(data?.leaderboard || null);
     } catch (error) {
-      setActionError(error.message || "Не удалось завершить live-сессию.");
+      if (isMountedRef.current) {
+        setActionError(error.message || "Не удалось завершить live-сессию.");
+      }
     } finally {
-      setIsActionLoading(false);
-      setActionType("");
+      if (isMountedRef.current) {
+        setIsActionLoading(false);
+        setActionType("");
+      }
     }
   };
 
@@ -453,11 +634,11 @@ export default function OrganizerLivePage() {
       ? "Текущая позиция в сценарии live-квиза."
       : "Участники могут подключаться до начала эфира.";
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("auth_user");
     navigate("/login", { replace: true });
-  };
+  }, [navigate]);
 
   return (
     <main className={styles.page}>

@@ -165,6 +165,75 @@ async function ensureQuizAttemptsTable() {
   `);
 }
 
+async function ensureQuizAttemptUsagesTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS quiz_attempt_usages (
+      id BIGSERIAL PRIMARY KEY,
+      quiz_id BIGINT NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
+      participant_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      source TEXT NOT NULL CHECK (source IN ('classic', 'live')),
+      quiz_attempt_id BIGINT UNIQUE REFERENCES quiz_attempts(id) ON DELETE SET NULL,
+      live_session_id BIGINT REFERENCES quiz_sessions(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await pool.query(`
+    ALTER TABLE quiz_attempt_usages
+    ADD COLUMN IF NOT EXISTS quiz_id BIGINT;
+  `);
+  await pool.query(`
+    ALTER TABLE quiz_attempt_usages
+    ADD COLUMN IF NOT EXISTS participant_id BIGINT;
+  `);
+  await pool.query(`
+    ALTER TABLE quiz_attempt_usages
+    ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'classic';
+  `);
+  await pool.query(`
+    ALTER TABLE quiz_attempt_usages
+    ADD COLUMN IF NOT EXISTS quiz_attempt_id BIGINT;
+  `);
+  await pool.query(`
+    ALTER TABLE quiz_attempt_usages
+    ADD COLUMN IF NOT EXISTS live_session_id BIGINT;
+  `);
+  await pool.query(`
+    ALTER TABLE quiz_attempt_usages
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_quiz_attempt_usages_quiz_participant
+    ON quiz_attempt_usages (quiz_id, participant_id);
+  `);
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_quiz_attempt_usages_attempt_id
+    ON quiz_attempt_usages (quiz_attempt_id);
+  `);
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_quiz_attempt_usages_live_session_participant
+    ON quiz_attempt_usages (live_session_id, participant_id);
+  `);
+  await pool.query(`
+    INSERT INTO quiz_attempt_usages (
+      quiz_id,
+      participant_id,
+      source,
+      quiz_attempt_id,
+      live_session_id,
+      created_at
+    )
+    SELECT
+      qa.quiz_id,
+      qa.participant_id,
+      CASE WHEN qa.live_session_id IS NULL THEN 'classic' ELSE 'live' END,
+      qa.id,
+      qa.live_session_id,
+      qa.created_at
+    FROM quiz_attempts qa
+    ON CONFLICT (quiz_attempt_id) DO NOTHING;
+  `);
+}
+
 async function ensureLiveSessionsTable() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS quiz_sessions (
@@ -292,6 +361,7 @@ module.exports = {
   ensureUsersTable,
   ensureQuizzesTable,
   ensureQuizAttemptsTable,
+  ensureQuizAttemptUsagesTable,
   ensureLiveSessionsTable,
   ensureLiveSessionParticipantsTable,
   ensureLiveSessionAnswersTable,

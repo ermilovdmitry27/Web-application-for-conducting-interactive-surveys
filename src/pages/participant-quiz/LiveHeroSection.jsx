@@ -1,6 +1,7 @@
+import { memo } from "react";
 import styles from "../../css/CabinetPage.module.css";
 
-export default function LiveHeroSection({
+function LiveHeroSection({
   quizTitle,
   joinCode,
   participantsCount,
@@ -44,3 +45,5 @@ export default function LiveHeroSection({
     </section>
   );
 }
+
+export default memo(LiveHeroSection);

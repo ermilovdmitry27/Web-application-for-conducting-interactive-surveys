@@ -1,8 +1,9 @@
+import { memo } from "react";
 import styles from "../../css/CabinetPage.module.css";
 import { resolveApiAssetUrl } from "../../lib/api/config";
 import { formatSeconds } from "./utils";
 
-export default function ActiveQuestionPanel({
+function ActiveQuestionPanel({
   currentQuestion,
   isPaused,
   questionRemainingSeconds,
@@ -83,3 +84,5 @@ export default function ActiveQuestionPanel({
     </div>
   );
 }
+
+export default memo(ActiveQuestionPanel);

@@ -1,7 +1,8 @@
+import { memo } from "react";
 import styles from "../../css/CabinetPage.module.css";
 import { getLiveStatusLabel } from "./utils";
 
-export default function FinishedLeaderboardPanel({
+function FinishedLeaderboardPanel({
   leaderboard,
   myLeaderboardPlace,
   sessionStatus,
@@ -96,3 +97,5 @@ export default function FinishedLeaderboardPanel({
     </div>
   );
 }
+
+export default memo(FinishedLeaderboardPanel);

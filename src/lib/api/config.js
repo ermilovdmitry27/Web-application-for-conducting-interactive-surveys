@@ -1,5 +1,6 @@
 const DEFAULT_API_PORT = "4000";
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+let cachedApiBaseUrl = "";
 
 export const DEFAULT_API_URL = `http://localhost:${DEFAULT_API_PORT}`;
 
@@ -21,6 +22,10 @@ function getPortFromUrl(urlValue) {
 }
 
 export function getApiBaseUrl() {
+  if (cachedApiBaseUrl) {
+    return cachedApiBaseUrl;
+  }
+
   const configuredApiUrl = normalizeApiUrl(process.env.REACT_APP_API_URL || DEFAULT_API_URL);
   const configuredApiPort = getPortFromUrl(configuredApiUrl);
 
@@ -31,15 +36,18 @@ export function getApiBaseUrl() {
     const currentPort = window.location.port || (currentProtocol === "https:" ? "443" : "80");
 
     if (currentPort === configuredApiPort) {
-      return currentOrigin;
+      cachedApiBaseUrl = currentOrigin;
+      return cachedApiBaseUrl;
     }
 
     if (!LOCAL_HOSTNAMES.has(currentHostname)) {
-      return `${currentProtocol}//${currentHostname}:${configuredApiPort}`;
+      cachedApiBaseUrl = `${currentProtocol}//${currentHostname}:${configuredApiPort}`;
+      return cachedApiBaseUrl;
     }
   }
 
-  return configuredApiUrl;
+  cachedApiBaseUrl = configuredApiUrl;
+  return cachedApiBaseUrl;
 }
 
 export function resolveApiAssetUrl(rawValue) {

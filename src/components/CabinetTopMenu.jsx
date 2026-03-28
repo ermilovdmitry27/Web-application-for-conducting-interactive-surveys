@@ -1,11 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import styles from "../css/CabinetPage.module.css";
-import { getStoredTheme, setThemePreference, THEMES, THEME_CHANGE_EVENT } from "../lib/theme";
 
 const MENU_ITEMS = [
   { key: "profile", label: "Профиль", icon: "profile" },
-  { key: "settings", label: "Настройки", icon: "settings" },
 ];
 
 function normalizeNameToken(value) {
@@ -98,7 +96,7 @@ function Icon({ type, className }) {
   );
 }
 
-export default function CabinetTopMenu({
+function CabinetTopMenu({
   userName,
   userFirstName = "",
   userLastName = "",
@@ -109,8 +107,6 @@ export default function CabinetTopMenu({
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState(() => getStoredTheme());
   const [avatarSrc, setAvatarSrc] = useState(initialAvatar || "");
   const wrapRef = useRef(null);
   const fullUserName = buildFullName({ userName, userFirstName, userLastName, userMiddleName });
@@ -119,24 +115,6 @@ export default function CabinetTopMenu({
   useEffect(() => {
     setAvatarSrc(initialAvatar || "");
   }, [initialAvatar]);
-
-  useEffect(() => {
-    const handleThemeChange = (event) => {
-      const nextTheme = event?.detail?.theme;
-      setCurrentTheme(nextTheme === THEMES.LIGHT ? THEMES.LIGHT : getStoredTheme());
-    };
-
-    window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange);
-    return () => {
-      window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setIsSettingsOpen(false);
-    }
-  }, [isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -160,11 +138,6 @@ export default function CabinetTopMenu({
     };
   }, []);
 
-  const handleThemeSelect = (nextTheme) => {
-    const appliedTheme = setThemePreference(nextTheme);
-    setCurrentTheme(appliedTheme);
-  };
-
   const handleOpenProfile = () => {
     setIsOpen(false);
     if (location.pathname !== "/profile") {
@@ -175,11 +148,6 @@ export default function CabinetTopMenu({
   const handleMenuItemClick = (key) => {
     if (key === "profile") {
       handleOpenProfile();
-      return;
-    }
-    if (key === "settings") {
-      setIsSettingsOpen((prev) => !prev);
-      return;
     }
   };
 
@@ -224,16 +192,12 @@ export default function CabinetTopMenu({
             <p className={styles.profileName}>{fullUserName}</p>
             <ul className={styles.menuList}>
               {MENU_ITEMS.map((item) => {
-                const isActive = item.key === "settings" && isSettingsOpen;
                 return (
                   <li key={item.key}>
                     <button
                       type="button"
-                      className={`${styles.menuItemButton} ${isActive ? styles.menuItemButtonActive : ""}`}
+                      className={styles.menuItemButton}
                       onClick={() => handleMenuItemClick(item.key)}
-                      aria-pressed={item.key === "settings" ? isSettingsOpen : undefined}
-                      aria-expanded={item.key === "settings" ? isSettingsOpen : undefined}
-                      aria-controls={item.key === "settings" ? "settings-panel" : undefined}
                     >
                       <Icon type={item.icon} className={styles.menuIcon} />
                       <span>{item.label}</span>
@@ -242,34 +206,6 @@ export default function CabinetTopMenu({
                 );
               })}
             </ul>
-            {isSettingsOpen && (
-              <div id="settings-panel" className={styles.settingsPanel}>
-                <p className={styles.settingsLabel}>Тема интерфейса</p>
-                <div className={styles.themeSwitch}>
-                  <button
-                    type="button"
-                    className={`${styles.themeOption} ${
-                      currentTheme === THEMES.DARK ? styles.themeOptionActive : ""
-                    }`}
-                    onClick={() => handleThemeSelect(THEMES.DARK)}
-                    aria-pressed={currentTheme === THEMES.DARK}
-                  >
-                    Темная
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.themeOption} ${
-                      currentTheme === THEMES.LIGHT ? styles.themeOptionActive : ""
-                    }`}
-                    onClick={() => handleThemeSelect(THEMES.LIGHT)}
-                    aria-pressed={currentTheme === THEMES.LIGHT}
-                  >
-                    Светлая
-                  </button>
-                </div>
-                <p className={styles.themeHint}>Выбор сохраняется для всех экранов приложения.</p>
-              </div>
-            )}
             <button type="button" className={styles.menuItemButton} onClick={onLogout}>
               <Icon type="logout" className={styles.menuIcon} />
               <span>Выйти</span>
@@ -280,3 +216,5 @@ export default function CabinetTopMenu({
     </div>
   );
 }
+
+export default memo(CabinetTopMenu);

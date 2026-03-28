@@ -81,36 +81,53 @@ export default function ParticipantCabinet() {
     loadAttempts();
   }, [loadAttempts]);
 
-  const attemptsStats = useMemo(() => {
+  const attemptsView = useMemo(() => {
     const total = attempts.length;
-    const liveTotal = attempts.filter((attempt) => attempt.isLive).length;
-    const averagePercentage =
-      total > 0
-        ? Math.round(
-            attempts.reduce((sum, attempt) => sum + Number(attempt.percentage || 0), 0) / total
-          )
-        : 0;
-    const bestPercentage = attempts.reduce(
-      (best, attempt) => Math.max(best, Number(attempt.percentage || 0)),
-      0
-    );
+    let liveTotal = 0;
+    let percentageSum = 0;
+    let bestPercentage = 0;
+    const liveAttempts = [];
+    const classicAttempts = [];
+
+    attempts.forEach((attempt) => {
+      const percentage = Number(attempt?.percentage || 0);
+      percentageSum += percentage;
+      bestPercentage = Math.max(bestPercentage, percentage);
+
+      if (attempt?.isLive) {
+        liveTotal += 1;
+        liveAttempts.push(attempt);
+      } else {
+        classicAttempts.push(attempt);
+      }
+    });
+
+    const buildGroups = (list, groupPrefix) =>
+      getGroupedAttempts(list, groupPrefix).map((group) => ({
+        ...group,
+        bestPercentage: group.attempts.reduce(
+          (best, attempt) => Math.max(best, Number(attempt?.percentage || 0)),
+          0
+        ),
+      }));
+
     return {
-      total,
-      liveTotal,
-      averagePercentage,
-      bestPercentage,
+      stats: {
+        total,
+        liveTotal,
+        averagePercentage: total > 0 ? Math.round(percentageSum / total) : 0,
+        bestPercentage,
+      },
+      liveAttempts,
+      classicAttempts,
+      hasClassicAttempts: classicAttempts.length > 0,
+      liveGroups: buildGroups(liveAttempts, "live"),
+      classicGroups: buildGroups(classicAttempts, "classic"),
     };
   }, [attempts]);
 
-  const liveAttempts = useMemo(
-    () => attempts.filter((attempt) => attempt.isLive),
-    [attempts]
-  );
-  const classicAttempts = useMemo(
-    () => attempts.filter((attempt) => !attempt.isLive),
-    [attempts]
-  );
-  const hasClassicAttempts = classicAttempts.length > 0;
+  const attemptsStats = attemptsView.stats;
+  const hasClassicAttempts = attemptsView.hasClassicAttempts;
 
   const handleJoinQuiz = (event) => {
     event.preventDefault();
@@ -167,11 +184,15 @@ export default function ParticipantCabinet() {
   const toggleAttemptExpanded = (attempt) => {
     const attemptId = Number(attempt?.id);
     const liveSessionId = Number(attempt?.liveSessionId);
+    const hasLoadedLeaderboard = Object.prototype.hasOwnProperty.call(
+      liveLeaderboardsBySessionId,
+      liveSessionId
+    );
     const shouldRequestLeaderboard =
       Boolean(attempt?.isLive) &&
       Number.isInteger(liveSessionId) &&
       liveSessionId > 0 &&
-      !liveLeaderboardsBySessionId[liveSessionId] &&
+      !hasLoadedLeaderboard &&
       !liveLeaderboardLoadingBySessionId[liveSessionId];
 
     setExpandedAttemptIds((prev) => ({
@@ -376,21 +397,15 @@ export default function ParticipantCabinet() {
     );
   };
 
-  const renderAttempts = (list, emptyText, groupPrefix) => {
-    if (list.length === 0) {
+  const renderAttemptGroups = (groups, emptyText) => {
+    if (groups.length === 0) {
       return <p className={styles.text}>{emptyText}</p>;
     }
 
-    const groupedAttempts = getGroupedAttempts(list, groupPrefix);
-
     return (
       <ul className={styles.resultGroupList}>
-        {groupedAttempts.map((group) => {
+        {groups.map((group) => {
           const isGroupExpanded = Boolean(expandedQuizGroupIds[group.key]);
-          const bestPercentage = group.attempts.reduce(
-            (best, attempt) => Math.max(best, Number(attempt.percentage || 0)),
-            0
-          );
           const isDeleting = deletingGroupKey === group.key;
 
           return (
@@ -403,7 +418,7 @@ export default function ParticipantCabinet() {
                   <div className={styles.resultGroupInfo}>
                     <p className={styles.resultGroupTitle}>{group.title}</p>
                     <p className={styles.resultGroupMeta}>
-                      {formatAttemptsCount(group.attempts.length)} • Лучший результат {bestPercentage}%
+                      {formatAttemptsCount(group.attempts.length)} • Лучший результат {group.bestPercentage}%
                     </p>
                   </div>
                 </div>
@@ -534,7 +549,7 @@ export default function ParticipantCabinet() {
                   <p className={styles.archiveLaneText}>Подключения по коду комнаты и результаты из live-эфира.</p>
                 </div>
                 {deleteError && <p className={styles.formError}>{deleteError}</p>}
-                {renderAttempts(liveAttempts, "Live-прохождений пока нет.", "live")}
+                {renderAttemptGroups(attemptsView.liveGroups, "Live-прохождений пока нет.")}
               </section>
 
               {hasClassicAttempts && (
@@ -545,7 +560,10 @@ export default function ParticipantCabinet() {
                       Архив обычных прохождений с сохранением баллов и скорости ответа.
                     </p>
                   </div>
-                  {renderAttempts(classicAttempts, "Обычных прохождений пока нет.", "classic")}
+                  {renderAttemptGroups(
+                    attemptsView.classicGroups,
+                    "Обычных прохождений пока нет."
+                  )}
                 </section>
               )}
             </div>

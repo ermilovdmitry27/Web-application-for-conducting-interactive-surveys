@@ -163,3 +163,22 @@ ON quiz_attempts (live_session_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_quiz_attempts_live_session_participant
 ON quiz_attempts (live_session_id, participant_id)
 WHERE live_session_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS quiz_attempt_usages (
+  id BIGSERIAL PRIMARY KEY,
+  quiz_id BIGINT NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
+  participant_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  source TEXT NOT NULL CHECK (source IN ('classic', 'live')),
+  quiz_attempt_id BIGINT UNIQUE REFERENCES quiz_attempts(id) ON DELETE SET NULL,
+  live_session_id BIGINT REFERENCES quiz_sessions(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_quiz_attempt_usages_quiz_participant
+ON quiz_attempt_usages (quiz_id, participant_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_quiz_attempt_usages_attempt_id
+ON quiz_attempt_usages (quiz_attempt_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_quiz_attempt_usages_live_session_participant
+ON quiz_attempt_usages (live_session_id, participant_id);

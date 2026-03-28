@@ -14,9 +14,10 @@ if (typeof global.TextDecoder === "undefined") {
 const { Pool } = require("pg");
 const dotenv = require("dotenv");
 
-dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+dotenv.config({ path: path.resolve(process.cwd(), ".env"), quiet: true });
 
 jest.setTimeout(30_000);
+const runBackendIntegrationTests = process.env.RUN_BACKEND_INTEGRATION_TESTS === "1";
 
 const rootDir = path.resolve(__dirname, "../..");
 const dbPool = new Pool({
@@ -215,7 +216,7 @@ async function registerAndLogin(email, role) {
   return loginResponse.body.token;
 }
 
-describe("backend quiz CRUD integration smoke", () => {
+(runBackendIntegrationTests ? describe : describe.skip)("backend quiz CRUD integration smoke", () => {
   beforeAll(async () => {
     serverPort = await getAvailablePort();
     await cleanupTestEntities();
@@ -312,6 +313,96 @@ describe("backend quiz CRUD integration smoke", () => {
       },
     ]);
 
+  });
+
+  test("deleting classic history does not restore attempts limit", async () => {
+    const limitedQuizPayload = {
+      title: `Limited Quiz ${runId}`,
+      description: "Single attempt quiz",
+      category: "math",
+      isActive: true,
+      durationMinutes: 8,
+      questionTimeSeconds: 20,
+      maxAttempts: 1,
+      rules: {
+        allowBackNavigation: false,
+        showCorrectAfterAnswer: false,
+        shuffleQuestions: false,
+      },
+      questions: [
+        {
+          type: "text",
+          prompt: "Only one try",
+          answerMode: "single",
+          options: [
+            { text: "Right", isCorrect: true },
+            { text: "Wrong", isCorrect: false },
+          ],
+        },
+      ],
+    };
+
+    const createResponse = await requestJson(
+      "POST",
+      "/api/quizzes",
+      limitedQuizPayload,
+      organizerToken
+    );
+
+    expect(createResponse.status).toBe(201);
+    const limitedQuizId = createResponse.body.quiz.id;
+    const limitedJoinCode = createResponse.body.quiz.joinCode;
+
+    const firstJoinResponse = await requestJson(
+      "POST",
+      "/api/quizzes/join",
+      { joinCode: limitedJoinCode },
+      participantToken
+    );
+
+    expect(firstJoinResponse.status).toBe(200);
+    expect(firstJoinResponse.body).toMatchObject({
+      attemptsUsed: 0,
+      attemptsLimit: 1,
+      attemptsRemaining: 1,
+    });
+
+    const submitResponse = await requestJson(
+      "POST",
+      `/api/quizzes/${limitedQuizId}/submit`,
+      {
+        answers: [{ questionId: 1, optionIds: [1] }],
+        spentSeconds: 7,
+      },
+      participantToken
+    );
+
+    expect(submitResponse.status).toBe(201);
+
+    const deleteResponse = await requestJson(
+      "DELETE",
+      `/api/attempts/mine/${limitedQuizId}`,
+      null,
+      participantToken
+    );
+
+    expect(deleteResponse.status).toBe(200);
+    expect(deleteResponse.body).toMatchObject({
+      deleted: true,
+      quizId: Number(limitedQuizId),
+    });
+
+    const secondJoinResponse = await requestJson(
+      "POST",
+      "/api/quizzes/join",
+      { joinCode: limitedJoinCode },
+      participantToken
+    );
+
+    expect(secondJoinResponse.status).toBe(403);
+    expect(secondJoinResponse.body).toEqual({
+      message: "Лимит попыток исчерпан (1).",
+    });
   });
 
   test("participant cannot edit organizer quiz", async () => {

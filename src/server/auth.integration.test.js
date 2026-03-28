@@ -14,9 +14,10 @@ if (typeof global.TextDecoder === "undefined") {
 const { Pool } = require("pg");
 const dotenv = require("dotenv");
 
-dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+dotenv.config({ path: path.resolve(process.cwd(), ".env"), quiet: true });
 
 jest.setTimeout(30_000);
+const runBackendIntegrationTests = process.env.RUN_BACKEND_INTEGRATION_TESTS === "1";
 
 const rootDir = path.resolve(__dirname, "../..");
 const dbPool = new Pool({
@@ -153,7 +154,7 @@ async function stopServer() {
   });
 }
 
-describe("backend auth integration smoke", () => {
+(runBackendIntegrationTests ? describe : describe.skip)("backend auth integration smoke", () => {
   beforeAll(async () => {
     serverPort = await getAvailablePort();
     await cleanupTestUser();

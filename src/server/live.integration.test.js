@@ -14,9 +14,10 @@ if (typeof global.TextDecoder === "undefined") {
 const { Pool } = require("pg");
 const dotenv = require("dotenv");
 
-dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+dotenv.config({ path: path.resolve(process.cwd(), ".env"), quiet: true });
 
 jest.setTimeout(30_000);
+const runBackendIntegrationTests = process.env.RUN_BACKEND_INTEGRATION_TESTS === "1";
 
 const rootDir = path.resolve(__dirname, "../..");
 const dbPool = new Pool({
@@ -203,7 +204,7 @@ async function registerAndLogin(email, role, firstName) {
   return loginResponse.body.token;
 }
 
-describe("backend live integration smoke", () => {
+(runBackendIntegrationTests ? describe : describe.skip)("backend live integration smoke", () => {
   beforeAll(async () => {
     serverPort = await getAvailablePort();
     await cleanupTestEntities();
@@ -337,6 +338,21 @@ describe("backend live integration smoke", () => {
       questionIndex: 0,
       showCorrectAfterAnswer: true,
       isCorrect: true,
+    });
+
+    const resubmitResponse = await requestJson(
+      "POST",
+      `/api/live-sessions/${sessionId}/answer`,
+      {
+        questionIndex: joinResponse.body.session.currentQuestionIndex,
+        optionIds: [2],
+      },
+      participantToken
+    );
+
+    expect(resubmitResponse.status).toBe(409);
+    expect(resubmitResponse.body).toEqual({
+      message: "Ответ на этот вопрос уже принят. Изменение ответа отключено организатором.",
     });
 
     const finishResponse = await requestJson(

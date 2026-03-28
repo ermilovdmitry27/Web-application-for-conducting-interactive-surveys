@@ -255,10 +255,13 @@ function getLiveAttemptTimeSpentSeconds(context, participantJoinedAt, answerRows
 }
 
 function buildLiveStatePair(context, participants = [], answeredParticipants = []) {
+  const participantsCount = Array.isArray(participants)
+    ? participants.length
+    : Number(context?.participantsCount || 0);
   const organizerState = buildLiveSessionState({
     session: context.session,
     quiz: context.quiz,
-    participantsCount: context.participantsCount,
+    participantsCount,
     participants,
     answeredParticipants,
     includeCorrect: true,
@@ -266,7 +269,7 @@ function buildLiveStatePair(context, participants = [], answeredParticipants = [
   const participantState = buildLiveSessionState({
     session: context.session,
     quiz: context.quiz,
-    participantsCount: context.participantsCount,
+    participantsCount,
     participants: [],
     answeredParticipants: [],
     includeCorrect: false,
